@@ -22,4 +22,7 @@
     <ProjectReference Include="..\..\src\Modules\Auth\AulaVirtual.Modules.Auth.Infrastructure\AulaVirtual.Modules.Auth.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AulaVirtual.Api\AulaVirtual.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\SqlCapture.cs" Link="Shared\SqlCapture.cs" />
+  </ItemGroup>
 </Project>

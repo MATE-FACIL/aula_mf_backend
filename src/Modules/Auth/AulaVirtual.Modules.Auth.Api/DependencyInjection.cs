@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using AulaVirtual.Modules.Auth.Application.Abstractions;
+using AulaVirtual.Modules.Auth.Application.Accounts.ChangeStatus;
 using AulaVirtual.Modules.Auth.Application.Accounts.CreateAccount;
 using AulaVirtual.Modules.Auth.Application.Authentication;
 using AulaVirtual.Modules.Auth.Application.Authentication.GetCurrentAccount;
@@ -66,8 +67,10 @@ public static class DependencyInjection
         services.AddScoped<GetCurrentAccountHandler>();
         services.AddScoped<CreateStudentAccountHandler>();
         services.AddScoped<CreateAdministratorAccountHandler>();
+        services.AddScoped<ChangeAccountStatusHandler>();
 
         services.AddScoped<IAuthRepository, AuthRepository>();
+        services.AddScoped<IAccountAdministration, AccountAdministration>();
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
         services.AddSingleton<IPasswordGenerator, CryptographicPasswordGenerator>();
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();

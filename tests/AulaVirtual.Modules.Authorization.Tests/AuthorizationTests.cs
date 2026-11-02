@@ -23,24 +23,27 @@ public sealed class AuthorizationTests
         var provisioner = new CatalogProvisioner(repository);
         await provisioner.ProvisionAsync(default);
         await provisioner.ProvisionAsync(default);
-        Assert.Equal(3, repository.Roles.Count);
-        Assert.Equal(3, repository.Permissions.Count);
-        Assert.Equal(3, repository.RolePermissions.Count);
+        Assert.Equal(Roles.All.Count, repository.Roles.Count);
+        Assert.Equal(Permissions.All.Count, repository.Permissions.Count);
+        Assert.Equal(Permissions.All.Count, repository.RolePermissions.Count);
         Assert.Single(repository.Versions);
         var service = UseCases();
         var admin = Guid.NewGuid();
         var student = Guid.NewGuid();
         var instructor = Guid.NewGuid();
-        users.Existing.UnionWith([admin, student, instructor]);
+        var guardian = Guid.NewGuid();
+        users.Existing.UnionWith([admin, student, instructor, guardian]);
         Assert.True(await service.AssignFirstAdministratorAsync(admin, default));
         Assert.False(await service.AssignFirstAdministratorAsync(admin, default));
         Assert.Single(repository.UserRoles, x => x.UserId == admin);
         Assert.False(await service.AssignFirstAdministratorAsync(student, default));
         await service.AssignRoleAsync(student, Roles.Student, default);
         await service.AssignRoleAsync(instructor, Roles.Instructor, default);
+        await service.AssignRoleAsync(guardian, Roles.Guardian, default);
         Assert.Equal(Permissions.All.OrderBy(x => x), (await service.GetEffectiveAsync(admin, default)).Permissions);
         Assert.Empty((await service.GetEffectiveAsync(student, default)).Permissions);
         Assert.Empty((await service.GetEffectiveAsync(instructor, default)).Permissions);
+        Assert.Empty((await service.GetEffectiveAsync(guardian, default)).Permissions);
     }
 
     [Fact]

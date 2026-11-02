@@ -1,6 +1,8 @@
 using AulaVirtual.Modules.Auth.Application.Abstractions;
 using AulaVirtual.Modules.Auth.Domain.Accounts;
 using AulaVirtual.Modules.Auth.Domain.Sessions;
+using AulaVirtual.Modules.Authorization.Application;
+using AulaVirtual.Modules.Users.Application.Abstractions;
 
 namespace AulaVirtual.Modules.Auth.Tests;
 
@@ -123,4 +125,55 @@ internal sealed class MutableTimeProvider(DateTimeOffset utcNow)
     {
         UtcNow = UtcNow.Add(duration);
     }
+}
+
+internal sealed class FakeRoleDirectory : IRoleDirectory
+{
+    public Dictionary<Guid, IReadOnlyList<string>> RolesByUser { get; } = [];
+
+    public Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> GetRoleCodesByUserIdsAsync(
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>>(RolesByUser
+            .Where(entry => userIds.Contains(entry.Key))
+            .ToDictionary(entry => entry.Key, entry => entry.Value));
+
+    public Task<IReadOnlyList<Guid>> GetUserIdsInRoleAsync(string roleCode, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Guid>>(RolesByUser
+            .Where(entry => entry.Value.Contains(roleCode))
+            .Select(entry => entry.Key)
+            .ToArray());
+
+    public Task<IReadOnlyDictionary<string, int>> CountUsersByRoleAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<string, int>>(RolesByUser
+            .SelectMany(entry => entry.Value)
+            .GroupBy(code => code)
+            .ToDictionary(group => group.Key, group => group.Count()));
+}
+
+internal sealed class FakeUserDirectory : IUserDirectory
+{
+    public List<UserSummary> Users { get; } = [];
+
+    public Task<UserSearchPage> SearchAsync(UserSearchQuery query, CancellationToken cancellationToken)
+    {
+        var matches = Users
+            .Where(user => query.RestrictToIds is null || query.RestrictToIds.Contains(user.Id))
+            .OrderByDescending(user => user.CreatedAt)
+            .ToList();
+        return Task.FromResult(new UserSearchPage(
+            matches.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList(),
+            matches.Count));
+    }
+
+    public Task<UserSummary?> GetAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Users.SingleOrDefault(user => user.Id == userId));
+
+    public Task<IReadOnlyList<UserSummary>> GetManyAsync(
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<UserSummary>>(Users.Where(user => userIds.Contains(user.Id)).ToList());
+
+    public Task<int> CountAsync(DateTimeOffset? createdSince, CancellationToken cancellationToken) =>
+        Task.FromResult(Users.Count(user => createdSince is null || user.CreatedAt >= createdSince));
 }

@@ -6,6 +6,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using AulaVirtual.Modules.Auth.Application.Abstractions;
 using AulaVirtual.Modules.Auth.Domain.Accounts;
+using AulaVirtual.Modules.Authorization.Application;
+using AulaVirtual.Modules.Users.Application.Abstractions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -245,6 +247,8 @@ public sealed class AuthApiTests
         Assert.Equal(factory.StudentAccount.UserId, currentAccount.UserId);
         Assert.Equal(["username", "email"], currentAccount.LoginTypes);
         Assert.Equal("active", currentAccount.Status);
+        Assert.Equal([Roles.Student], currentAccount.Roles);
+        Assert.Equal("Ana Quispe", currentAccount.DisplayName);
         Assert.Equal(
             HttpStatusCode.NoContent,
             logoutAllResponse.StatusCode);
@@ -351,11 +355,15 @@ public sealed class AuthApiTests
         Guid AuthAccountId,
         Guid UserId,
         IReadOnlyList<string> LoginTypes,
-        string Status);
+        string Status,
+        IReadOnlyList<string> Roles,
+        string? DisplayName);
 
     private sealed class AuthApiFactory : WebApplicationFactory<Program>
     {
         private readonly FakeAuthRepository repository = new();
+        private readonly FakeRoleDirectory roles = new();
+        private readonly FakeUserDirectory users = new();
         private readonly string environment;
 
         public AuthAccount StudentAccount { get; }
@@ -399,6 +407,9 @@ public sealed class AuthApiTests
 
             repository.Accounts.Add(StudentAccount);
             repository.Accounts.Add(administrator);
+            roles.RolesByUser[StudentAccount.UserId] = [Roles.Student];
+            users.Users.Add(new UserSummary(
+                StudentAccount.UserId, "Ana", "Quispe", "Mamani", null, "DNI", "77340061", now, 0));
         }
 
         protected override void ConfigureWebHost(
@@ -427,7 +438,12 @@ public sealed class AuthApiTests
                 services.RemoveAll<IAuthRepository>();
                 services.RemoveAll<IPasswordHasher>();
 
+                services.RemoveAll<IRoleDirectory>();
+                services.RemoveAll<IUserDirectory>();
+
                 services.AddSingleton<IAuthRepository>(repository);
+                services.AddSingleton<IRoleDirectory>(roles);
+                services.AddSingleton<IUserDirectory>(users);
                 services.AddSingleton<IPasswordHasher>(
                     new StubPasswordHasher("valid-password"));
             });

@@ -43,7 +43,7 @@ public sealed class AuthorizationApiTests
             .AssignFirstAdministratorAsync(factory.UserId, default);
         var after = await client.GetFromJsonAsync<AuthorizationBody>("/api/v1/authorization/me");
         Assert.Contains(Roles.Administrator, after!.Roles);
-        Assert.Equal(3, after.Permissions.Count);
+        Assert.Equal(Permissions.All.Count, after.Permissions.Count);
     }
 
     private sealed record AuthorizationBody(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);

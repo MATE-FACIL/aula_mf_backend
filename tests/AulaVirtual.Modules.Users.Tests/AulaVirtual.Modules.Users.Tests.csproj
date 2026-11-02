@@ -20,4 +20,7 @@
     <ProjectReference Include="..\..\src\Modules\Users\AulaVirtual.Modules.Users.Domain\AulaVirtual.Modules.Users.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Users\AulaVirtual.Modules.Users.Infrastructure\AulaVirtual.Modules.Users.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\SqlCapture.cs" Link="Shared\SqlCapture.cs" />
+  </ItemGroup>
 </Project>

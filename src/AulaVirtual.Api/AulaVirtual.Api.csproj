@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Administration\AulaVirtual.Modules.Administration.Api\AulaVirtual.Modules.Administration.Api.csproj" />
     <ProjectReference Include="..\Modules\Auth\AulaVirtual.Modules.Auth.Api\AulaVirtual.Modules.Auth.Api.csproj" />
     <ProjectReference Include="..\Modules\Authorization\AulaVirtual.Modules.Authorization.Api\AulaVirtual.Modules.Authorization.Api.csproj" />
     <ProjectReference Include="..\Modules\Users\AulaVirtual.Modules.Users.Api\AulaVirtual.Modules.Users.Api.csproj" />

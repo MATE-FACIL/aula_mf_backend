@@ -50,6 +50,10 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.UpdatedAt)
             .HasColumnName("updated_at");
 
+        // Admin listings are ordered by most recent first.
+        builder.HasIndex(user => user.CreatedAt)
+            .HasDatabaseName("ix_users_created_at");
+
         builder.HasIndex(user => user.DocumentNumber)
             .HasDatabaseName("ix_users_document_number")
             .IsUnique()
