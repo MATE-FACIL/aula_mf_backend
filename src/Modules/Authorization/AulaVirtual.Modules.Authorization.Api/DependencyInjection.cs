@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddControllers().AddApplicationPart(typeof(AuthorizationController).Assembly);
         services.AddScoped<IAuthorizationRepository, AuthorizationRepository>();
         services.AddScoped<IPermissionChecker, PermissionChecker>();
+        services.AddScoped<IRoleDirectory, RoleDirectory>();
         services.AddScoped<AuthorizationUseCases>();
         services.AddScoped<CatalogProvisioner>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

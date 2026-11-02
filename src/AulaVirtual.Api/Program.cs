@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using AulaVirtual.Api.ExceptionHandling;
 using AulaVirtual.Api.Public;
+using AulaVirtual.Modules.Administration.Api;
 using AulaVirtual.Modules.Attendance.Api;
 using AulaVirtual.Modules.Auth.Api;
 using AulaVirtual.Modules.Authorization.Api;
@@ -63,7 +64,8 @@ builder.Services
     .AddEnrollmentsModule(builder.Configuration)
     .AddExamsModule(builder.Configuration)
     .AddAttendanceModule(builder.Configuration)
-    .AddCertificatesModule(builder.Configuration);
+    .AddCertificatesModule(builder.Configuration)
+    .AddAdministrationModule(builder.Configuration);
 
 var app = builder.Build();
 

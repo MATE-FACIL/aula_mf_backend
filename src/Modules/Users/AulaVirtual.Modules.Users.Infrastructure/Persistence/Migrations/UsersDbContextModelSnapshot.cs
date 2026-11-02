@@ -21,7 +21,34 @@ namespace AulaVirtual.Modules.Users.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "unaccent");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianLink", b =>
+                {
+                    b.Property<Guid>("GuardianUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("guardian_user_id");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("GuardianUserId", "StudentUserId")
+                        .HasName("pk_guardian_links");
+
+                    b.HasIndex("StudentUserId")
+                        .HasDatabaseName("ix_guardian_links_student_user_id");
+
+                    b.ToTable("guardian_links", "users", t =>
+                        {
+                            t.HasCheckConstraint("ck_guardian_links_distinct_users", "guardian_user_id <> student_user_id");
+                        });
+                });
 
             modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Users.User", b =>
                 {
@@ -72,12 +99,32 @@ namespace AulaVirtual.Modules.Users.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_users");
 
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_users_created_at");
+
                     b.HasIndex("DocumentNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_users_document_number")
                         .HasFilter("document_number IS NOT NULL");
 
                     b.ToTable("users", "users");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianLink", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Users.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("GuardianUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_guardian_links_users_guardian_user_id");
+
+                    b.HasOne("AulaVirtual.Modules.Users.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("StudentUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_guardian_links_users_student_user_id");
                 });
 #pragma warning restore 612, 618
         }

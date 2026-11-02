@@ -7,6 +7,8 @@ using AulaVirtual.Modules.Auth.Application.Authentication.Login;
 using AulaVirtual.Modules.Auth.Application.Authentication.Logout;
 using AulaVirtual.Modules.Auth.Application.Authentication.Refresh;
 using AulaVirtual.Modules.Auth.Domain.Accounts;
+using AulaVirtual.Modules.Authorization.Application;
+using AulaVirtual.Modules.Users.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -115,6 +117,8 @@ public sealed class AuthController(IHostEnvironment environment) : ControllerBas
     [HttpGet("me")]
     public async Task<IActionResult> Me(
         [FromServices] GetCurrentAccountHandler handler,
+        [FromServices] IRoleDirectory roles,
+        [FromServices] IUserDirectory users,
         CancellationToken cancellationToken)
     {
         if (!TryGetAuthAccountId(out var authAccountId))
@@ -126,13 +130,23 @@ public sealed class AuthController(IHostEnvironment environment) : ControllerBas
             authAccountId,
             cancellationToken);
 
-        return account is null
-            ? UnauthorizedProblem()
-            : Ok(new CurrentAccountResponse(
-                account.AuthAccountId,
-                account.UserId,
-                account.LoginTypes.Select(ToApiValue).ToArray(),
-                ToApiValue(account.Status)));
+        if (account is null)
+        {
+            return UnauthorizedProblem();
+        }
+
+        // Each module has its own DbContext, so both lookups can run at the same time.
+        var rolesTask = roles.GetRoleCodesByUserIdsAsync([account.UserId], cancellationToken);
+        var userTask = users.GetAsync(account.UserId, cancellationToken);
+        await Task.WhenAll(rolesTask, userTask);
+
+        return Ok(new CurrentAccountResponse(
+            account.AuthAccountId,
+            account.UserId,
+            account.LoginTypes.Select(ToApiValue).ToArray(),
+            ToApiValue(account.Status),
+            rolesTask.Result.GetValueOrDefault(account.UserId) ?? [],
+            userTask.Result is { } user ? $"{user.GivenNames} {user.FirstSurname}" : null));
     }
 
     private async Task<IActionResult> LoginAsync(

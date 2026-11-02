@@ -21,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<ICreateUser, CreateUserHandler>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserExistence, UserExistence>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IGuardianLinks, GuardianLinkStore>();
         services.AddSingleton(TimeProvider.System);
 
         services.AddDbContext<UsersDbContext>(options =>

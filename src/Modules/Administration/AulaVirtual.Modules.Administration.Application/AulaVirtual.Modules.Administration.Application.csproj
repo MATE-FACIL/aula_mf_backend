@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>AulaVirtual.Modules.Administration.Application</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Back-office composition: reads and orchestrates other modules only through their Application contracts. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Auth\AulaVirtual.Modules.Auth.Application\AulaVirtual.Modules.Auth.Application.csproj" />
+    <ProjectReference Include="..\..\Authorization\AulaVirtual.Modules.Authorization.Application\AulaVirtual.Modules.Authorization.Application.csproj" />
+    <ProjectReference Include="..\..\Users\AulaVirtual.Modules.Users.Application\AulaVirtual.Modules.Users.Application.csproj" />
+  </ItemGroup>
+</Project>

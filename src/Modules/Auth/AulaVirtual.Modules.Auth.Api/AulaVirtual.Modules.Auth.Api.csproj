@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Authorization\AulaVirtual.Modules.Authorization.Application\AulaVirtual.Modules.Authorization.Application.csproj" />
     <ProjectReference Include="..\AulaVirtual.Modules.Auth.Application\AulaVirtual.Modules.Auth.Application.csproj" />
     <ProjectReference Include="..\AulaVirtual.Modules.Auth.Infrastructure\AulaVirtual.Modules.Auth.Infrastructure.csproj" />
   </ItemGroup>

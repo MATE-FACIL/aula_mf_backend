@@ -14,4 +14,7 @@
     <ProjectReference Include="..\..\src\Modules\Users\AulaVirtual.Modules.Users.Application\AulaVirtual.Modules.Users.Application.csproj" />
     <ProjectReference Include="..\..\src\AulaVirtual.Api\AulaVirtual.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\SqlCapture.cs" Link="Shared\SqlCapture.cs" />
+  </ItemGroup>
 </Project>
