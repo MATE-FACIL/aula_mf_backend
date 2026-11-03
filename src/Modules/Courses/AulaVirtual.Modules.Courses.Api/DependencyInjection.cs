@@ -19,6 +19,7 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
+        services.AddScoped<IOfferingDirectory, OfferingDirectory>();
         services.AddScoped<ICourseRepository, CourseRepository>();
         services.AddScoped<IPublicCourseCatalogRepository, PublicCourseCatalogRepository>();
         services.AddScoped<PublicCourseCatalogUseCases>();
