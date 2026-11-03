@@ -9,7 +9,11 @@ internal sealed class CourseConfiguration : IEntityTypeConfiguration<Course>
     public void Configure(EntityTypeBuilder<Course> builder)
     {
         builder.ToTable("courses", "courses", table =>
-            table.HasCheckConstraint("ck_courses_published_category", "NOT is_published OR category_id IS NOT NULL"));
+        {
+            table.HasCheckConstraint("ck_courses_published_category", "NOT is_published OR category_id IS NOT NULL");
+            table.HasCheckConstraint("ck_courses_session_duration_minutes",
+                "session_duration_minutes IS NULL OR session_duration_minutes BETWEEN 30 AND 240");
+        });
 
         builder.HasKey(course => course.Id).HasName("pk_courses");
         builder.Property(course => course.Id).HasColumnName("id").ValueGeneratedNever();
@@ -27,6 +31,7 @@ internal sealed class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(course => course.Syllabus).HasColumnName("syllabus").HasColumnType("text");
         builder.Property(course => course.TargetAudience).HasColumnName("target_audience").HasColumnType("text");
         builder.Property(course => course.Prerequisites).HasColumnName("prerequisites").HasColumnType("text");
+        builder.Property(course => course.SessionDurationMinutes).HasColumnName("session_duration_minutes");
         builder.Property(course => course.CoverObjectKey).HasColumnName("cover_object_key").HasMaxLength(200);
         builder.Property(course => course.CoverContentType).HasColumnName("cover_content_type").HasMaxLength(100);
         builder.Property(course => course.CoverSize).HasColumnName("cover_size");

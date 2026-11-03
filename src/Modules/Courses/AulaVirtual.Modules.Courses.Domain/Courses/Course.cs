@@ -24,6 +24,8 @@ public sealed class Course
     public string? Syllabus { get; private set; }
     public string? TargetAudience { get; private set; }
     public string? Prerequisites { get; private set; }
+    // Default length of each class (SCRUM-42: primary 60 min, secondary 90 min). Null = not configured.
+    public int? SessionDurationMinutes { get; private set; }
     public string? CoverObjectKey { get; private set; }
     public string? CoverContentType { get; private set; }
     public long? CoverSize { get; private set; }
@@ -105,6 +107,19 @@ public sealed class Course
         CoverContentType = contentType;
         CoverSize = size;
         CoverOriginalFileName = originalFileName;
+        UpdatedAt = updatedAt;
+    }
+
+    public const int MinSessionMinutes = 30;
+    public const int MaxSessionMinutes = 240;
+
+    public void SetSessionDuration(int? minutes, DateTimeOffset updatedAt)
+    {
+        if (minutes is < MinSessionMinutes or > MaxSessionMinutes)
+            throw new ArgumentOutOfRangeException(nameof(minutes),
+                $"Session duration must be between {MinSessionMinutes} and {MaxSessionMinutes} minutes.");
+        if (SessionDurationMinutes == minutes) return;
+        SessionDurationMinutes = minutes;
         UpdatedAt = updatedAt;
     }
 

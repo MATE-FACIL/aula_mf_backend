@@ -74,6 +74,10 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("prerequisites");
 
+                    b.Property<int?>("SessionDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("session_duration_minutes");
+
                     b.Property<string>("ShortDescription")
                         .HasColumnType("text")
                         .HasColumnName("short_description");
@@ -105,6 +109,8 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
                     b.ToTable("courses", "courses", t =>
                         {
                             t.HasCheckConstraint("ck_courses_published_category", "NOT is_published OR category_id IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_courses_session_duration_minutes", "session_duration_minutes IS NULL OR session_duration_minutes BETWEEN 30 AND 240");
                         });
                 });
 
