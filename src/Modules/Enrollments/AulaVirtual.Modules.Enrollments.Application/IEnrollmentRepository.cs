@@ -38,5 +38,8 @@ public interface IEnrollmentRepository
     Task<SeatReservation> AddWithinCapacityAsync(Enrollment enrollment, int maximumCapacity,
         CancellationToken cancellationToken);
 
+    /// <summary>Editions where the student has an ACTIVE enrollment (served by the student/offering index).</summary>
+    Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -221,6 +221,11 @@ public sealed class EnrollmentUseCaseTests
 
         public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Guid>>(enrollments
+                .Where(item => item.StudentUserId == studentUserId && item.Status == EnrollmentStatus.Active)
+                .Select(item => item.CourseOfferingId).ToList());
+
         Task<OfferingSummary?> IOfferingDirectory.GetAsync(Guid offeringId, CancellationToken cancellationToken) =>
             Task.FromResult(offerings.SingleOrDefault(item => item.Id == offeringId));
 

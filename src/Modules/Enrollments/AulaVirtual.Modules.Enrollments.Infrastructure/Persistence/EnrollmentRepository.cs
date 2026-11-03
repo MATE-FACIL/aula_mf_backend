@@ -80,5 +80,12 @@ public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentR
         return SeatReservation.Added;
     }
 
+    public async Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId,
+        CancellationToken cancellationToken) =>
+        await db.Enrollments.AsNoTracking()
+            .Where(item => item.StudentUserId == studentUserId && item.Status == EnrollmentStatus.Active)
+            .Select(item => item.CourseOfferingId)
+            .ToListAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }
