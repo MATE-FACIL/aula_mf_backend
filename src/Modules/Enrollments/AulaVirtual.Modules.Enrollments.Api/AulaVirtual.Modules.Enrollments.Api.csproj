@@ -8,6 +8,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
     <ProjectReference Include="..\AulaVirtual.Modules.Enrollments.Application\AulaVirtual.Modules.Enrollments.Application.csproj" />
     <ProjectReference Include="..\AulaVirtual.Modules.Enrollments.Infrastructure\AulaVirtual.Modules.Enrollments.Infrastructure.csproj" />
   </ItemGroup>

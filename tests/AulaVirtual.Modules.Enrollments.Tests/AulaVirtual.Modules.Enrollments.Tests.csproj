@@ -16,7 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Enrollments\AulaVirtual.Modules.Enrollments.Api\AulaVirtual.Modules.Enrollments.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Enrollments\AulaVirtual.Modules.Enrollments.Application\AulaVirtual.Modules.Enrollments.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Enrollments\AulaVirtual.Modules.Enrollments.Domain\AulaVirtual.Modules.Enrollments.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Enrollments\AulaVirtual.Modules.Enrollments.Infrastructure\AulaVirtual.Modules.Enrollments.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\SqlCapture.cs" Link="Shared\SqlCapture.cs" />
   </ItemGroup>
 </Project>

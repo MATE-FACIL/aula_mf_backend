@@ -7,8 +7,9 @@ public static class Permissions
     public const string CourseOfferingsManage = "course_offerings.manage";
     public const string InstructorsManage = "instructors.manage";
     public const string UsersManage = "users.manage";
+    public const string EnrollmentsManage = "enrollments.manage";
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
-    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage };
+    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage, EnrollmentsManage };
 }
 
 public static class Roles

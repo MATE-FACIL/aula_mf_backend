@@ -5,5 +5,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AulaVirtual.Modules.Enrollments.Domain\AulaVirtual.Modules.Enrollments.Domain.csproj" />
+    <!-- Cross-module contracts only: who is a student (Authorization), names (Users), editions and capacity (Courses). -->
+    <ProjectReference Include="..\..\Authorization\AulaVirtual.Modules.Authorization.Application\AulaVirtual.Modules.Authorization.Application.csproj" />
+    <ProjectReference Include="..\..\Courses\AulaVirtual.Modules.Courses.Application\AulaVirtual.Modules.Courses.Application.csproj" />
+    <ProjectReference Include="..\..\Users\AulaVirtual.Modules.Users.Application\AulaVirtual.Modules.Users.Application.csproj" />
   </ItemGroup>
 </Project>

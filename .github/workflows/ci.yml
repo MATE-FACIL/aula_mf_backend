@@ -177,7 +177,7 @@ jobs:
 
       - name: Detect model changes without a migration
         run: |
-          for entry in Users:UsersDbContext Auth:AuthDbContext Authorization:AuthorizationDbContext Courses:CoursesDbContext; do
+          for entry in Users:UsersDbContext Auth:AuthDbContext Authorization:AuthorizationDbContext Courses:CoursesDbContext Enrollments:EnrollmentsDbContext; do
             module="${entry%%:*}"; context="${entry##*:}"
             echo "Checking ${context}"
             dotnet ef migrations has-pending-model-changes \

@@ -68,8 +68,8 @@ public sealed class AuthorizationUseCases(IAuthorizationRepository repository, I
 
 public sealed class CatalogProvisioner(IAuthorizationRepository repository)
 {
-    // v2: guardian role and users.manage permission.
-    public const int CurrentVersion = 2;
+    // v2: guardian role and users.manage permission. v3: enrollments.manage.
+    public const int CurrentVersion = 3;
     public const string CatalogCode = "aulavirtual";
 
     public async Task ProvisionAsync(CancellationToken cancellationToken)
@@ -87,7 +87,8 @@ public sealed class CatalogProvisioner(IAuthorizationRepository repository)
             (Permissions.CoursesManage, "Manage courses"),
             (Permissions.CourseOfferingsManage, "Manage course offerings"),
             (Permissions.InstructorsManage, "Manage instructors"),
-            (Permissions.UsersManage, "Manage users and families")
+            (Permissions.UsersManage, "Manage users and families"),
+            (Permissions.EnrollmentsManage, "Manage enrollments")
         })
         {
             var permission = await EnsurePermissionAsync(code, name, cancellationToken);
