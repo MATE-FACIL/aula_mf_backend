@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddControllers().AddApplicationPart(typeof(AdminUsersController).Assembly);
         services.AddScoped<AdminUserUseCases>();
+        services.AddScoped<AdminInstructorUseCases>();
 
         return services;
     }

@@ -113,10 +113,14 @@ public sealed class CourseUseCases(ICourseRepository repository,
             throw new ArgumentException("Category does not exist.", nameof(id));
     }
 
-    private void ApplyContent(Course course, SaveCourseCommand command) =>
+    private void ApplyContent(Course course, SaveCourseCommand command)
+    {
+        var now = timeProvider.GetUtcNow();
         course.Update(command.Title, command.CategoryId, command.ShortDescription,
             command.FullDescription, command.Objectives, command.Syllabus,
-            command.TargetAudience, command.Prerequisites, timeProvider.GetUtcNow());
+            command.TargetAudience, command.Prerequisites, now);
+        course.SetSessionDuration(command.SessionDurationMinutes, now);
+    }
 
     private static void RequireId(Guid id)
     {

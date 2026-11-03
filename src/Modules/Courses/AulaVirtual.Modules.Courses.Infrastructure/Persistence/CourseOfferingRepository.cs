@@ -13,12 +13,14 @@ public sealed class CourseOfferingRepository(CoursesDbContext dbContext) : ICour
         dbContext.CourseOfferings.Include(offering => offering.Sessions)
             .Include(offering => offering.InstructorAssignments)
             .Include(offering => offering.SpecificPromotion)
+            .AsSplitQuery()
             .SingleOrDefaultAsync(offering => offering.Id == offeringId, cancellationToken);
 
     public async Task<IReadOnlyList<CourseOffering>> ListByCourseAsync(Guid courseId, CancellationToken cancellationToken) =>
         await dbContext.CourseOfferings.AsNoTracking().Include(offering => offering.Sessions)
             .Include(offering => offering.InstructorAssignments)
             .Include(offering => offering.SpecificPromotion)
+            .AsSplitQuery()
             .Where(offering => offering.CourseId == courseId).OrderBy(offering => offering.CreatedAt)
             .ToListAsync(cancellationToken);
 
