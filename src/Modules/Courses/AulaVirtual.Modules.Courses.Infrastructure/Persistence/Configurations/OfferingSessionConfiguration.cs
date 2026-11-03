@@ -16,7 +16,9 @@ internal sealed class OfferingSessionConfiguration : IEntityTypeConfiguration<Of
         builder.Property(session => session.StartsAt).HasColumnName("starts_at").IsRequired();
         builder.Property(session => session.EndsAt).HasColumnName("ends_at").IsRequired();
         builder.Property(session => session.VirtualLink).HasColumnName("virtual_link").HasMaxLength(2048);
-        builder.HasIndex(session => session.CourseOfferingId)
-            .HasDatabaseName("ix_offering_sessions_course_offering_id");
+        // Serves both «sessions of an edition» and «sessions of these editions between two dates, in order»
+        // (student schedule), so a separate single-column index is not needed.
+        builder.HasIndex(session => new { session.CourseOfferingId, session.StartsAt })
+            .HasDatabaseName("ix_offering_sessions_offering_starts_at");
     }
 }

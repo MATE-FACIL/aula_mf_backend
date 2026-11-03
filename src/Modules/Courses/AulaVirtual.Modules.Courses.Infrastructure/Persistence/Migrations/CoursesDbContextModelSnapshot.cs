@@ -277,8 +277,8 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_offering_sessions");
 
-                    b.HasIndex("CourseOfferingId")
-                        .HasDatabaseName("ix_offering_sessions_course_offering_id");
+                    b.HasIndex("CourseOfferingId", "StartsAt")
+                        .HasDatabaseName("ix_offering_sessions_offering_starts_at");
 
                     b.ToTable("offering_sessions", "courses", t =>
                         {

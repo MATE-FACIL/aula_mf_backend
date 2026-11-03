@@ -37,3 +37,38 @@ public sealed class OfferingDirectoryQueryTests
         Assert.Contains("ORDER BY", sql);
     }
 }
+
+public sealed class OfferingScheduleQueryTests
+{
+    private readonly SqlCapture capture = new();
+
+    [Fact]
+    public async Task Sessions_JoinEditionCourseAndCategory_InOneStatement()
+    {
+        var directory = new OfferingScheduleDirectory(new CoursesDbContext(
+            new DbContextOptionsBuilder<CoursesDbContext>()
+                .UseNpgsql("Host=localhost;Database=model_only;Username=model")
+                .AddInterceptors(capture)
+                .Options));
+
+        var sql = await SqlCapture.RunAsync(capture, () => directory.GetSessionsAsync(
+            [Guid.NewGuid()], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30), 200, default));
+
+        Assert.Contains("LEFT JOIN", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
+    }
+
+    [Fact]
+    public async Task NoEditions_ReturnsWithoutQuerying()
+    {
+        var directory = new OfferingScheduleDirectory(new CoursesDbContext(
+            new DbContextOptionsBuilder<CoursesDbContext>()
+                .UseNpgsql("Host=localhost;Database=model_only;Username=model")
+                .AddInterceptors(capture)
+                .Options));
+
+        Assert.Empty(await directory.GetSessionsAsync([], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(1), 10, default));
+        Assert.Null(capture.Sql);
+    }
+}

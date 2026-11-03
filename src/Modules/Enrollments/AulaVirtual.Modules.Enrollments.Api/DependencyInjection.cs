@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
         services.AddScoped<EnrollmentUseCases>();
+        services.AddScoped<StudentScheduleUseCases>();
 
         services.AddDbContext<EnrollmentsDbContext>(options =>
         {

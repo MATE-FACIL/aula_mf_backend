@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
         services.AddScoped<IOfferingDirectory, OfferingDirectory>();
+        services.AddScoped<IOfferingScheduleDirectory, OfferingScheduleDirectory>();
         services.AddScoped<ICourseRepository, CourseRepository>();
         services.AddScoped<IPublicCourseCatalogRepository, PublicCourseCatalogRepository>();
         services.AddScoped<PublicCourseCatalogUseCases>();
