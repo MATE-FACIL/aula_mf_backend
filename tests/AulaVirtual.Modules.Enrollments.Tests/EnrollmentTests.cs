@@ -221,6 +221,11 @@ public sealed class EnrollmentUseCaseTests
 
         public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task<IReadOnlyList<Enrollment>> GetLiveByStudentsAsync(IReadOnlyCollection<Guid> studentUserIds,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Enrollment>>(enrollments
+                .Where(item => studentUserIds.Contains(item.StudentUserId) && item.HoldsSeat).ToList());
+
         public Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Guid>>(enrollments
                 .Where(item => item.StudentUserId == studentUserId && item.Status == EnrollmentStatus.Active)

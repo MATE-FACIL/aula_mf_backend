@@ -41,5 +41,9 @@ public interface IEnrollmentRepository
     /// <summary>Editions where the student has an ACTIVE enrollment (served by the student/offering index).</summary>
     Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken);
 
+    /// <summary>Pending and active enrollments of several students in one query (family panel).</summary>
+    Task<IReadOnlyList<Enrollment>> GetLiveByStudentsAsync(IReadOnlyCollection<Guid> studentUserIds,
+        CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

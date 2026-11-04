@@ -84,6 +84,7 @@ public sealed class StudentScheduleTests
         public Task<IReadOnlyList<UserSummary>> GetManyAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<UserSummary>>(People.Where(p => userIds.Contains(p.Id)).ToList());
 
+        public Task<IReadOnlyList<Enrollment>> GetLiveByStudentsAsync(IReadOnlyCollection<Guid> studentUserIds, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<Enrollment?> GetAsync(Guid enrollmentId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<(IReadOnlyList<Enrollment> Items, int Total)> SearchAsync(EnrollmentQuery query, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyDictionary<Guid, int>> CountSeatsAsync(IReadOnlyCollection<Guid>? offeringIds, CancellationToken cancellationToken) => throw new NotSupportedException();

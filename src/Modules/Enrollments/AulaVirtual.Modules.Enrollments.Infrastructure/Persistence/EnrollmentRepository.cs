@@ -87,5 +87,16 @@ public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentR
             .Select(item => item.CourseOfferingId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Enrollment>> GetLiveByStudentsAsync(IReadOnlyCollection<Guid> studentUserIds,
+        CancellationToken cancellationToken)
+    {
+        if (studentUserIds.Count == 0) return [];
+        var ids = studentUserIds.ToArray();
+        return await db.Enrollments.AsNoTracking()
+            .Where(item => ids.Contains(item.StudentUserId) && item.Status != EnrollmentStatus.Withdrawn)
+            .OrderByDescending(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }
