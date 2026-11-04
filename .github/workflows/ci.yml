@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -71,7 +71,7 @@ jobs:
     # Para hacerlo obligatorio: formatear el repositorio, quitar la captura de código de
     # salida del paso final y agregar este job a "needs" de ci-passed.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -115,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -160,7 +160,7 @@ jobs:
       ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=aula_virtual_dev;Username=aula;Password=ci_only_password
       AUTHORIZATION_BOOTSTRAP_TEST_CONNECTION: Host=localhost;Port=5432;Database=aula_virtual_dev;Username=aula;Password=ci_only_password
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -204,7 +204,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
