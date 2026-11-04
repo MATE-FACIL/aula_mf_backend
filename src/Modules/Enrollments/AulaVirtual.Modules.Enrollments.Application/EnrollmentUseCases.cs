@@ -44,6 +44,13 @@ public sealed class EnrollmentUseCases(
             return EnrollmentResult<EnrollmentView>.NotFound("No encontramos esa edición del curso.");
         }
 
+        // A draft can still change its schedule and teachers: nobody takes a seat until it is published.
+        if (!offering.IsPublished)
+        {
+            return EnrollmentResult<EnrollmentView>.Conflict(
+                "Este grupo todavía está en borrador. Publícalo para poder matricular.");
+        }
+
         var enrollment = Enrollment.Create(Guid.NewGuid(), studentUserId, offering.Id, paymentNote, actorUserId,
             timeProvider.GetUtcNow());
 

@@ -114,6 +114,20 @@ public sealed class EnrollmentUseCaseTests
     }
 
     [Fact]
+    public async Task Enroll_RejectsDraftEditions_WithoutTakingASeat()
+    {
+        var student = fakes.AddPerson("Ana", "Perez", Roles.Student);
+        var draft = fakes.AddOffering("Matemáticas", "Grupo borrador", 8, published: false);
+        var useCases = UseCases();
+
+        var result = await useCases.EnrollAsync(admin, student, draft, null, default);
+
+        Assert.Equal(EnrollmentResultStatus.Conflict, result.Status);
+        Assert.Contains("borrador", result.Detail);
+        Assert.Equal(0, (await useCases.ListOfferingSeatsAsync(default)).Single().TakenSeats);
+    }
+
+    [Fact]
     public async Task Enroll_RespectsCapacity_AndWithdrawalFreesTheSeat()
     {
         var offering = fakes.AddOffering("Lab IA", "Grupo B", capacity: 1);
@@ -182,10 +196,10 @@ public sealed class EnrollmentUseCaseTests
             return userId;
         }
 
-        public Guid AddOffering(string course, string name, int capacity)
+        public Guid AddOffering(string course, string name, int capacity, bool published = true)
         {
             var id = Guid.NewGuid();
-            offerings.Add(new OfferingSummary(id, Guid.NewGuid(), course, name, capacity, true));
+            offerings.Add(new OfferingSummary(id, Guid.NewGuid(), course, name, capacity, published));
             return id;
         }
 
