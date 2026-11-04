@@ -1,16 +1,17 @@
 # Pruebas del backend
 
-Resultados del 4 de noviembre de 2026 sobre el commit `c189c57` de la rama `feat/scrum-67-68-familia`.
+Resultados del 4 de noviembre de 2026 sobre el commit `39eda7b` de la rama `feat/scrum-67-68-familia`.
 
 | Prueba | Dónde corre | Resultado |
 |---|---|---|
-| Unitarias y de integración (`dotnet test`) | En memoria | **165 de 165** |
-| Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **22 de 22** |
+| Unitarias y de integración (`dotnet test`) | En memoria | **166 de 166** |
+| Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **24 de 24** |
 | Grupos y horarios (SCRUM-41, SCRUM-42) | API en Docker con PostgreSQL 17 | **17 de 17** |
+| Clases del alumno (SCRUM-50, SCRUM-51) | API en Docker con PostgreSQL 17 | **11 de 11** |
 | Familia (SCRUM-67, SCRUM-35) | API en Docker con PostgreSQL 17 | **6 de 6** |
-| Recorrido en navegador real | Aula conectada a la API en Docker | **24 de 24**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
+| Recorrido en navegador real | Aula conectada a la API en Docker | **46 de 46**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
 
-Durante el recorrido en navegador, la API no registró ningún error ni excepción.
+Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
 
 ## Pruebas por módulo
 
@@ -20,10 +21,10 @@ Durante el recorrido en navegador, la API no registró ningún error ni excepci�
 | Auth | 43 |
 | Authorization | 12 |
 | Courses | 57 |
-| Enrollments | 22 |
+| Enrollments | 23 |
 | Users | 9 |
 | SharedKernel.Storage | 4 |
-| **Total** | **165** |
+| **Total** | **166** |
 
 La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md).
 
@@ -37,6 +38,8 @@ Cada corrida crea sus propios datos ficticios en PostgreSQL. Esto es lo que se c
 - sin enrollments.manage → 403
 - sin token → 401
 - 10 alumnos creados
+- grupo en borrador → 409
+- publicar el grupo
 - 10 altas simultáneas: exactamente 3 entran
 - las otras 7 → 409 «grupo lleno»
 - cupos del grupo: 3 de 3, 0 libres
@@ -76,6 +79,20 @@ Cada corrida crea sus propios datos ficticios en PostgreSQL. Esto es lo que se c
 - matricular en el grupo publicado
 - cupos del grupo (1 de 8, publicado)
 
+### Clases del alumno
+
+- grupo publicado
+- login real del alumno + cookie de renovación
+- matrícula PENDIENTE: todavía sin clases
+- matrícula ACTIVA: 2 clases en el rango por defecto (no la de 60 días)
+- clase con curso, grupo, categoría, profesor y enlace
+- clase sin enlace llega con virtualLink null
+- ordenadas por inicio
+- rango explícito de 70 días incluye la clase lejana
+- rango invertido → 400
+- admin sin matrículas → lista vacía (sin errores)
+- sin token → 401
+
 ### Familia
 
 - el padre ve solo sus 2 hijos
@@ -93,11 +110,13 @@ Las pruebas de `dotnet test` no necesitan Docker:
 dotnet test
 ```
 
-Para levantar la API real:
+Para correr las pruebas contra la API real (necesitan Docker y Node.js 20 o superior):
 
 ```bash
-cp .env.example .env   # completa los valores
+cp .env.example .env          # completa los valores
 docker compose up -d --build
+sh tests/e2e/setup-admin.sh   # solo en una base nueva
+node tests/e2e/run.mjs
 ```
 
-Los scripts de las pruebas contra la API todavía no están en este repositorio. Son scripts locales de Node.js, así que por ahora estos resultados no se pueden repetir solo con el repo.
+Cada corrida deja sus datos ficticios en la base. El CI las corre en cada pull request, en el job «Container image and smoke test».

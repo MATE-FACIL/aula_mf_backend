@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 165 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de noviembre de 2026.
+Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -220,7 +220,7 @@ Las 165 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `SpecificPromotions_UseCurrentWindowAndExistingPriceRules`
 - `VisibilityAndPublicContract_KeepOnlyPublishedCoursesAndOfferings`
 
-## Enrollments (22)
+## Enrollments (23)
 
 ### EnrollmentDomainTests
 
@@ -239,6 +239,7 @@ Las 165 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `ActivateAndWithdraw_ValidateTheCurrentState`
 - `Controller_RequiresEnrollmentsManagePermission`
 - `Enroll_CreatesPending_WithNamesForTheList`
+- `Enroll_RejectsDraftEditions_WithoutTakingASeat`
 - `Enroll_RejectsNonStudents_UnknownEditions_AndDuplicates`
 - `Enroll_RespectsCapacity_AndWithdrawalFreesTheSeat`
 - `List_FiltersByStatus_AndRejectsUnknownStatus`
