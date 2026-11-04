@@ -233,6 +233,12 @@ jobs:
       - name: Smoke test a database-backed public endpoint
         run: curl --fail --silent --show-error http://localhost:5087/api/v1/public/courses
 
+      - name: Provision the catalog and first administrator
+        run: sh tests/e2e/setup-admin.sh
+
+      - name: End-to-end tests against the API
+        run: node tests/e2e/run.mjs
+
       - name: Dump logs on failure
         if: ${{ failure() }}
         run: docker compose logs --no-color --tail 200
