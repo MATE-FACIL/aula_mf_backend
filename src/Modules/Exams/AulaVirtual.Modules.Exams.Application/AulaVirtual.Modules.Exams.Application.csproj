@@ -5,5 +5,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AulaVirtual.Modules.Exams.Domain\AulaVirtual.Modules.Exams.Domain.csproj" />
+    <ProjectReference Include="..\..\Courses\AulaVirtual.Modules.Courses.Application\AulaVirtual.Modules.Courses.Application.csproj" />
+    <ProjectReference Include="..\..\Enrollments\AulaVirtual.Modules.Enrollments.Application\AulaVirtual.Modules.Enrollments.Application.csproj" />
   </ItemGroup>
 </Project>

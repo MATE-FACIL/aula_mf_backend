@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<StudentScheduleUseCases>();
         services.AddScoped<FamilyUseCases>();
         services.AddScoped<StudentLessonsUseCases>();
+        services.AddScoped<IStudentCourseAccess>(provider => provider.GetRequiredService<StudentLessonsUseCases>());
 
         services.AddDbContext<EnrollmentsDbContext>(options =>
         {

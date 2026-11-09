@@ -16,6 +16,18 @@ public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentR
             .Select(item => item.StudentUserId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountActiveAsync(IReadOnlyCollection<Guid> courseOfferingIds,
+        CancellationToken cancellationToken)
+    {
+        if (courseOfferingIds.Count == 0) return new Dictionary<Guid, int>();
+        var ids = courseOfferingIds.ToArray();
+        return await db.Enrollments.AsNoTracking()
+            .Where(item => ids.Contains(item.CourseOfferingId) && item.Status == EnrollmentStatus.Active)
+            .GroupBy(item => item.CourseOfferingId)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(row => row.Key, row => row.Count, cancellationToken);
+    }
+
     public Task<Enrollment?> GetAsync(Guid enrollmentId, CancellationToken cancellationToken) =>
         db.Enrollments.SingleOrDefaultAsync(item => item.Id == enrollmentId, cancellationToken);
 

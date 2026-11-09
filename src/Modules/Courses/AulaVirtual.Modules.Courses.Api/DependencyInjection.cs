@@ -24,6 +24,10 @@ public static class DependencyInjection
         services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>();
         services.AddScoped<IOfferingDirectory, OfferingDirectory>();
         services.AddScoped<IOfferingScheduleDirectory, OfferingScheduleDirectory>();
+        // Teacher panel (SCRUM-69) and practice (SCRUM-59/60): small read contracts over courses.
+        services.AddScoped<TeachingDirectory>();
+        services.AddScoped<ITeachingDirectory>(provider => provider.GetRequiredService<TeachingDirectory>());
+        services.AddScoped<ILessonDirectory>(provider => provider.GetRequiredService<TeachingDirectory>());
         services.AddScoped<ICourseRepository, CourseRepository>();
         // Lessons (SCRUM-55): one repository serves the administration and the read contract for students.
         services.AddScoped<CourseContentRepository>();

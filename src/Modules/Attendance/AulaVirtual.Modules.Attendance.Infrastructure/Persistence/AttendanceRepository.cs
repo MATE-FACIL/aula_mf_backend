@@ -47,6 +47,33 @@ public sealed class AttendanceRepository(AttendanceDbContext db) : IAttendanceRe
         return rows.Select(row => new StatusCount(row.StudentUserId, row.Status, row.Count)).ToArray();
     }
 
+    public async Task<IReadOnlyDictionary<Guid, (int Present, int Late, int Absent)>> CountBySessionsAsync(
+        IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken)
+    {
+        if (sessionIds.Count == 0) return new Dictionary<Guid, (int, int, int)>();
+        var ids = sessionIds.ToArray();
+        var rows = await db.Records.AsNoTracking()
+            .Where(record => ids.Contains(record.SessionId))
+            .GroupBy(record => new { record.SessionId, record.Status })
+            .Select(group => new { group.Key.SessionId, group.Key.Status, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(row => row.SessionId).ToDictionary(group => group.Key, group => (
+            group.Where(row => row.Status == AttendanceStatus.Present).Sum(row => row.Count),
+            group.Where(row => row.Status == AttendanceStatus.Late).Sum(row => row.Count),
+            group.Where(row => row.Status == AttendanceStatus.Absent).Sum(row => row.Count)));
+    }
+
+    public async Task<IReadOnlyList<StatusCount>> CountByStudentInOfferingAsync(Guid courseOfferingId,
+        CancellationToken cancellationToken)
+    {
+        var rows = await db.Records.AsNoTracking()
+            .Where(record => record.CourseOfferingId == courseOfferingId)
+            .GroupBy(record => new { record.StudentUserId, record.Status })
+            .Select(group => new { group.Key.StudentUserId, group.Key.Status, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => new StatusCount(row.StudentUserId, row.Status, row.Count)).ToArray();
+    }
+
     public async Task<IReadOnlyList<AttendanceRecord>> GetRecentAsync(IReadOnlyCollection<Guid> studentUserIds,
         DateTimeOffset since, int limit, CancellationToken cancellationToken)
     {

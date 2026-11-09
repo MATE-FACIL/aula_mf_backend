@@ -9,5 +9,6 @@
     <ProjectReference Include="..\..\Courses\AulaVirtual.Modules.Courses.Application\AulaVirtual.Modules.Courses.Application.csproj" />
     <ProjectReference Include="..\..\Enrollments\AulaVirtual.Modules.Enrollments.Application\AulaVirtual.Modules.Enrollments.Application.csproj" />
     <ProjectReference Include="..\..\Users\AulaVirtual.Modules.Users.Application\AulaVirtual.Modules.Users.Application.csproj" />
+    <ProjectReference Include="..\..\Exams\AulaVirtual.Modules.Exams.Application\AulaVirtual.Modules.Exams.Application.csproj" />
   </ItemGroup>
 </Project>

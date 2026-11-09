@@ -84,9 +84,11 @@ export const check = (name, ok, detail) => {
   console.log(`${ok ? 'OK  ' : 'FAIL'} ${name}${ok ? '' : ` → ${JSON.stringify(detail)}`}`);
   if (!ok) failures++;
 };
+// Sets the exit code instead of calling process.exit(): on Windows, exiting while sockets are still closing can
+// crash Node (libuv assertion) and turn a passing suite into a failure.
 export const finish = () => {
   console.log(failures ? `\n${failures} fallos` : '\nTodo OK');
-  process.exit(failures ? 1 : 0);
+  process.exitCode = failures ? 1 : 0;
 };
 
 /**
@@ -110,4 +112,31 @@ export function storageRequest(url, { method = 'GET', headers = {}, body } = {})
     if (body) req.write(body);
     req.end();
   });
+}
+
+// ── Almacenamiento local: limpieza de lo que suben las pruebas ─────────
+// Se usa el curl del propio contenedor de almacenamiento (firma SigV4), así no hace falta ningún SDK.
+const storageCompose = ['compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.storage.yml', 'exec', '-T', 's3', 'sh', '-c'];
+const storageCredentials = `${process.env.LOCAL_S3_ACCESS_KEY || 'aula-local'}:${process.env.LOCAL_S3_SECRET_KEY || 'aula-local-secret'}`;
+const signedCurl = (args) => `curl -s --aws-sigv4 "aws:amz:us-east-1:s3" --user "${storageCredentials}" ${args}`;
+
+/** Claves de los objetos bajo `prefix` en los dos buckets locales. */
+export function storageObjects(prefix) {
+  const keys = [];
+  for (const bucket of ['aula-private', 'aula-public']) {
+    const xml = execFileSync('docker', [...storageCompose,
+      signedCurl(`"http://localhost:9000/${bucket}?list-type=2&prefix=${encodeURIComponent(prefix)}"`)],
+    { cwd: root, encoding: 'utf8' });
+    for (const [, key] of xml.matchAll(/<Key>([^<]+)<\/Key>/g)) keys.push({ bucket, key });
+  }
+  return keys;
+}
+
+/** Borra todo lo que haya bajo `prefix`. Devuelve cuántos objetos encontró (0 = la API ya había limpiado). */
+export function deleteStorageObjects(prefix) {
+  const found = storageObjects(prefix);
+  for (const { bucket, key } of found) {
+    execFileSync('docker', [...storageCompose, signedCurl(`-X DELETE "http://localhost:9000/${bucket}/${key}"`)], { cwd: root });
+  }
+  return found.length;
 }

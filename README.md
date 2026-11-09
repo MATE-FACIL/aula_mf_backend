@@ -58,6 +58,8 @@ docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d --build
 
 Sin ese archivo, la API funciona igual, pero las subidas de archivos responden 503.
 
+El servidor local guarda los archivos en memoria: al apagarlo no queda nada en el disco ni en volúmenes de Docker. Además, la suite de archivos (`tests/e2e/files.mjs`) borra todo lo que sube, pase o falle, y comprueba que no haya quedado nada.
+
 ## Estructura
 
 - `src/AulaVirtual.Api/`: host HTTP.

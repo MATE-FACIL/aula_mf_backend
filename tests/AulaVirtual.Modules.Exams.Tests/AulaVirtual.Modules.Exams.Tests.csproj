@@ -13,10 +13,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <Using Include="Xunit" />
+    <Compile Include="..\Shared\SqlCapture.cs" Link="Shared\SqlCapture.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Exams\AulaVirtual.Modules.Exams.Application\AulaVirtual.Modules.Exams.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Exams\AulaVirtual.Modules.Exams.Domain\AulaVirtual.Modules.Exams.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Exams\AulaVirtual.Modules.Exams.Infrastructure\AulaVirtual.Modules.Exams.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

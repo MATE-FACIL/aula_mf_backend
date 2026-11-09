@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 let failed = 0;
-for (const name of ['groups', 'enrollments', 'classes', 'family', 'lessons', 'attendance', 'levels', 'files']) {
+for (const name of ['groups', 'enrollments', 'classes', 'family', 'lessons', 'attendance', 'levels', 'files', 'practice', 'teacher']) {
   console.log(`\n=== ${name}`);
   const { status } = spawnSync(process.execPath, [fileURLToPath(new URL(`./${name}.mjs`, import.meta.url))], { stdio: 'inherit' });
   if (status !== 0) failed++;

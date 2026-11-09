@@ -4,6 +4,7 @@ using AulaVirtual.Modules.Attendance.Infrastructure.Persistence;
 using AulaVirtual.Modules.Authorization.Application;
 using AulaVirtual.Modules.Courses.Application.Offerings;
 using AulaVirtual.Modules.Enrollments.Application;
+using AulaVirtual.Modules.Exams.Application.Practice;
 using AulaVirtual.Modules.Users.Application.Abstractions;
 using AulaVirtual.Tests.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -178,6 +179,38 @@ public sealed class AttendanceUseCaseTests
     }
 
     [Fact]
+    public async Task OneClick_MarksEveryoneUnmarkedPresent_WithoutTouchingExistingMarks()
+    {
+        await UseCases().MarkAsync(teacher, session, [Entry(luis, "absent", "Avisó")], default);
+
+        var result = await UseCases().MarkRemainingPresentAsync(teacher, session, default);
+
+        Assert.Equal(AttendanceResultStatus.Ok, result.Status);
+        Assert.Equal("present", result.Value!.Students.Single(s => s.StudentUserId == ana).Status);
+        Assert.Equal("absent", result.Value.Students.Single(s => s.StudentUserId == luis).Status);
+        Assert.Equal(2, fakes.Records.Count);
+        Assert.Equal(AttendanceResultStatus.Forbidden, (await UseCases().MarkRemainingPresentAsync(stranger, session, default)).Status);
+    }
+
+    [Fact]
+    public async Task TeacherPanel_ShowsOnlyTheTeachersGroups_WithAttendanceAndPractice()
+    {
+        fakes.Teaching[teacher] = [new TeacherGroup(group, Guid.NewGuid(), "Matemáticas", "Grupo A", true, 8, 1, session, DateTimeOffset.UtcNow)];
+        await UseCases().MarkAsync(teacher, session, [Entry(ana, "present"), Entry(luis, "late")], default);
+        var panel = new TeacherPanelUseCases(fakes, fakes, fakes, fakes, fakes);
+
+        var groups = await panel.ListGroupsAsync(teacher, default);
+        var detail = await panel.GetGroupAsync(teacher, group, default);
+
+        Assert.Equal(2, Assert.Single(groups).ActiveStudents);
+        Assert.Empty(await panel.ListGroupsAsync(stranger, default));
+        Assert.Null(await panel.GetGroupAsync(stranger, group, default));
+        Assert.Equal(2, Assert.Single(detail!.Sessions).Marked);
+        Assert.Equal(100, detail.Students.Single(s => s.StudentUserId == luis).Attendance.Rate);
+        Assert.Equal(75, detail.Students[0].Practice.Percent);
+    }
+
+    [Fact]
     public async Task Family_SeesOnlyTheirChildren_WithTotalsAndGroupNames()
     {
         var parent = Guid.NewGuid();
@@ -201,7 +234,7 @@ public sealed class AttendanceUseCaseTests
         Assert.Equal(0, fakes.ReportQueries);
     }
 
-    private sealed class Fakes : IOfferingScheduleDirectory, IPermissionChecker, IEnrollmentRoster, IAttendanceRepository,
+    internal sealed class Fakes : IOfferingScheduleDirectory, IPermissionChecker, IEnrollmentRoster, IAttendanceRepository, ITeachingDirectory, IPracticeProgressDirectory,
         IUserDirectory, IGuardianLinks, IOfferingDirectory
     {
         public Dictionary<Guid, SessionDetails> Sessions { get; } = [];
@@ -223,6 +256,34 @@ public sealed class AttendanceUseCaseTests
 
         public Task<bool> HasPermissionAsync(Guid userId, string permissionCode, CancellationToken cancellationToken) =>
             Task.FromResult(permissionCode == Permissions.AttendanceManage && Admins.Contains(userId));
+
+        public Dictionary<Guid, List<TeacherGroup>> Teaching { get; } = [];
+
+        public Task<IReadOnlyList<TeacherGroup>> GetGroupsAsync(Guid teacherUserId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<TeacherGroup>>(Teaching.GetValueOrDefault(teacherUserId) ?? []);
+
+        public Task<IReadOnlyList<GroupSession>?> GetGroupSessionsAsync(Guid teacherUserId, Guid offeringId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<GroupSession>?>((Teaching.GetValueOrDefault(teacherUserId) ?? []).Any(g => g.OfferingId == offeringId)
+                ? Sessions.Values.Where(s => s.OfferingId == offeringId).OrderBy(s => s.StartsAt)
+                    .Select(s => new GroupSession(s.SessionId, s.StartsAt, s.EndsAt, null)).ToList()
+                : null);
+
+        public Task<IReadOnlyDictionary<Guid, Progress>> GetCourseProgressAsync(IReadOnlyCollection<Guid> studentUserIds, Guid courseId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, Progress>>(studentUserIds.ToDictionary(id => id, _ => Progress.Of(3, 4)));
+
+        public Task<IReadOnlyDictionary<Guid, int>> CountActiveAsync(IReadOnlyCollection<Guid> courseOfferingIds, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, int>>(courseOfferingIds.ToDictionary(id => id, id => (Roster.GetValueOrDefault(id) ?? []).Count));
+
+        public Task<IReadOnlyDictionary<Guid, (int Present, int Late, int Absent)>> CountBySessionsAsync(IReadOnlyCollection<Guid> sessionIds,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, (int, int, int)>>(Records.Where(r => sessionIds.Contains(r.SessionId)).GroupBy(r => r.SessionId)
+                .ToDictionary(g => g.Key, g => (g.Count(r => r.Status == AttendanceStatus.Present), g.Count(r => r.Status == AttendanceStatus.Late),
+                    g.Count(r => r.Status == AttendanceStatus.Absent))));
+
+        public Task<IReadOnlyList<StatusCount>> CountByStudentInOfferingAsync(Guid courseOfferingId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<StatusCount>>(Records.Where(r => r.CourseOfferingId == courseOfferingId)
+                .GroupBy(r => (r.StudentUserId, r.Status)).Select(g => new StatusCount(g.Key.StudentUserId, g.Key.Status, g.Count())).ToList());
 
         public Task<IReadOnlyList<Guid>> GetActiveStudentIdsAsync(Guid courseOfferingId, CancellationToken cancellationToken) =>
             Task.FromResult(Roster.GetValueOrDefault(courseOfferingId) ?? []);

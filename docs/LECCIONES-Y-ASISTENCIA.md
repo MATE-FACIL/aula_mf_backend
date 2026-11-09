@@ -1,6 +1,6 @@
-# Lecciones, archivos, niveles y asistencia
+# Lecciones, archivos, niveles, práctica, asistencia y panel del profesor
 
-API de SCRUM-55 (lecciones), SCRUM-58 (archivos), SCRUM-39 (niveles de Matemáticas) y SCRUM-53 (asistencia). Todas las rutas empiezan por `/api/v1` y necesitan sesión.
+API de SCRUM-55 (lecciones), SCRUM-58 (archivos), SCRUM-39 (niveles de Matemáticas), SCRUM-59 y SCRUM-60 (práctica), SCRUM-53 (asistencia) y SCRUM-69 (panel del profesor). Todas las rutas empiezan por `/api/v1` y necesitan sesión.
 
 ## Lecciones (SCRUM-55)
 
@@ -106,6 +106,44 @@ Crear niveles se puede repetir sin riesgo: los niveles que ya existen y su conte
 
 `GET /students/me/courses` también devuelve el `level` de cada curso que sea un nivel, para la pantalla «Mi ruta» y el diagnóstico.
 
+## Práctica (SCRUM-59 y SCRUM-60)
+
+Cada lección puede tener hasta 30 ejercicios: de **opción múltiple** (de 2 a 6 opciones) o **numéricos** (con tolerancia opcional). Se corrigen en el servidor.
+
+### Equipo
+
+Requiere el permiso `courses.manage`.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /courses/{courseId}/lessons/{lessonId}/exercises` | Los ejercicios con su respuesta y su explicación |
+| `PUT /courses/{courseId}/lessons/{lessonId}/exercises` | Reemplaza la lista ordenada. Cuerpo: `{ exercises: [{ id?, kind, prompt, options, correctOption, correctNumber, tolerance, explanation }] }` |
+
+`kind` es `multiple_choice` o `numeric`, y `correctOption` empieza en 0.
+
+- **Editar:** un ejercicio enviado con su `id` se edita.
+- **Quitar:** uno que falta en la lista se **archiva**, no se borra. Así los alumnos conservan su historial, y deja de contar en el avance.
+
+### Alumno
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /students/me/lessons/{lessonId}/practice` | Los ejercicios **sin** la respuesta ni la explicación, con los intentos y si ya lo resolvió |
+| `POST /students/me/exercises/{exerciseId}/answers` | Cuerpo: `{ answer }`. Responde `{ isCorrect, explanation, lessonProgress, attempts }` |
+| `GET /students/me/courses/{courseId}/progress` | Avance del nivel o curso: en total y por lección publicada |
+| `GET /students/me/practice/attempts?lessonId=&page=&pageSize=` | Historial de intentos, del más reciente al más antiguo |
+
+### Reglas
+
+- **Respuestas:**
+  - En opción múltiple la respuesta es el número de la opción.
+  - En las numéricas se acepta coma o punto decimal («3,5» o «3.5»).
+  - Una respuesta que no se puede leer da 400 y no se guarda.
+- **Explicación:** recién llega después de responder.
+- **Avance:** es el porcentaje de ejercicios resueltos bien al menos una vez. Si no hay ejercicios, vale `null`.
+- **Quién puede practicar:** solo los alumnos con matrícula activa, y solo en lecciones publicadas. En cualquier otro caso, 404.
+- **Límite:** 50 intentos por ejercicio y alumno, para que nadie llene el historial probando al azar.
+
 ## Asistencia (SCRUM-53)
 
 Hay un registro por clase y alumno, con estado `present`, `late` o `absent` y una nota opcional de hasta 200 caracteres. Una corrección cambia ese mismo registro y guarda quién la hizo.
@@ -143,6 +181,18 @@ La tasa (`rate`) es el porcentaje de clases asistidas, y llegar tarde cuenta com
 
 Ninguna de las dos rutas recibe un id de alumno: parten de la cuenta de la sesión, así que nadie puede pedir la asistencia de otro niño.
 
+## Panel del profesor (SCRUM-69)
+
+Todo parte del usuario de la sesión: el profesor **solo ve sus grupos**, y cualquier otra cuenta recibe una lista vacía o 404.
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /teachers/me/groups` | Sus grupos con los alumnos activos, el cupo, el número de clases y la próxima clase |
+| `GET /teachers/me/groups/{offeringId}` | Las clases del grupo con la asistencia contada, y los alumnos con su asistencia en el grupo y su avance de práctica |
+| `POST /attendance/sessions/{sessionId}/present-all` | **Asistencia en un clic:** marca presentes a todos los alumnos activos sin marca; no toca las marcas ya puestas |
+
+Las grabaciones (SCRUM-54) y las notas de evaluaciones (SCRUM-62) se sumarán al panel cuando existan. Las pantallas del profesor son SCRUM-70.
+
 ## Rendimiento
 
 Cada lectura tiene un número fijo de consultas, sin importar cuántas unidades, lecciones, alumnos o hijos haya. Ninguna consulta se repite por cada elemento.
@@ -151,6 +201,10 @@ Cada lectura tiene un número fijo de consultas, sin importar cuántas unidades,
 |---|---|
 | Curso completo | 4: curso, unidades, lecciones y materiales; después, la firma local de los archivos |
 | Lista de niveles | 2: niveles con su curso y conteo de lecciones agrupado |
+| Práctica de una lección | Lección (1), matrícula (2), ejercicios (1) y estado del alumno agrupado (1) |
+| Avance de un nivel | Matrícula (2), lecciones publicadas (1), ejercicios por lección y resueltos por lección, ambos agrupados (2) |
+| Grupos del profesor | Grupos con su curso (1), sus clases (1) y alumnos activos agrupados (1) |
+| Detalle de un grupo | Número fijo: grupos y clases (4), alumnos (1), asistencia por clase y por alumno (2), nombres (1) y avance (3) |
 | Adjuntar archivos | Una consulta al almacenamiento por archivo nuevo, todas en paralelo |
 | Lecciones del alumno | 2 de matrícula + 4 del curso |
 | Lista de una clase | Clase, profesores y permiso en paralelo; luego alumnos y marcas en paralelo; luego nombres |
@@ -164,11 +218,15 @@ Estos son los índices que sostienen esas consultas:
 | `ix_lessons_unit_position` | Ordenar y agregar lecciones en una unidad |
 | `ux_attendance_records_session_student` | Una marca por clase y alumno; también sirve la lista de una clase |
 | `ix_attendance_records_student_starts_at` | Historial del alumno, de la más reciente a la más antigua, y sus totales |
+| `ix_exercises_lesson_active_position` | Ejercicios activos de una lección, en orden, y su conteo |
+| `ix_exercise_attempts_student_exercise` | Estado del alumno por ejercicio y límite de intentos |
+| `ix_exercise_attempts_student_lesson` | Ejercicios resueltos por lección: el avance |
+| `ix_exercise_attempts_student_answered_at` | Historial de intentos, del más reciente al más antiguo |
 
 La fecha de la clase se copia en cada registro de asistencia. Así el historial se ordena sin consultar cursos: el horario de un grupo publicado no puede cambiar, por lo que la copia no se desactualiza.
 
 ## Despliegue
 
-- **Migraciones:** `AddCourseContent` y `AddLessonFilesAndMathLevels` (cursos) e `InitialAttendance` (esquema `attendance`). `docker/migrate.sh` y el CI ya las incluyen.
+- **Migraciones:** `AddCourseContent` y `AddLessonFilesAndMathLevels` (cursos), `InitialAttendance` (esquema `attendance`) e `InitialPractice` (esquema `exams`). `docker/migrate.sh` y el CI ya las incluyen.
 - **Almacenamiento:** en R2, agrega los tipos de archivo de las lecciones a `Storage__R2__AllowedContentTypes`, permite 2 GB en `Storage__R2__MaxDirectUploadBytes` y configura CORS en el bucket privado (ver el README).
 - **Permisos:** hay que volver a provisionar el catálogo para crear `attendance.manage`. En local: `docker compose --profile tools run --rm provision`.

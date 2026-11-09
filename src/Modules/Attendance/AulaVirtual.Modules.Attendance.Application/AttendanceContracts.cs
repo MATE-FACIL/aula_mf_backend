@@ -71,6 +71,13 @@ public interface IAttendanceRepository
     Task<IReadOnlyList<StatusCount>> CountByStatusAsync(IReadOnlyCollection<Guid> studentUserIds,
         CancellationToken cancellationToken);
 
+    /// <summary>Marks per class (present, late, absent), in one grouped query.</summary>
+    Task<IReadOnlyDictionary<Guid, (int Present, int Late, int Absent)>> CountBySessionsAsync(IReadOnlyCollection<Guid> sessionIds,
+        CancellationToken cancellationToken);
+
+    /// <summary>Marks per student and status inside one group, in one grouped query.</summary>
+    Task<IReadOnlyList<StatusCount>> CountByStudentInOfferingAsync(Guid courseOfferingId, CancellationToken cancellationToken);
+
     /// <summary>Newest first, classes since <paramref name="since"/>, at most <paramref name="limit"/> rows.</summary>
     Task<IReadOnlyList<AttendanceRecord>> GetRecentAsync(IReadOnlyCollection<Guid> studentUserIds, DateTimeOffset since,
         int limit, CancellationToken cancellationToken);

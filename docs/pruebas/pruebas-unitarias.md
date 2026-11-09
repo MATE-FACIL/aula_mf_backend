@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
+Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -27,7 +27,7 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `SetActive_DeactivatesOthers_ButNeverTheActor`
 - `Summary_CountsNewUsersAndRoles`
 
-## Attendance (21)
+## Attendance (23)
 
 ### AttendanceQueryTests
 
@@ -51,12 +51,14 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `Family_SeesOnlyTheirChildren_WithTotalsAndGroupNames`
 - `FutureClass_OpensFifteenMinutesBefore`
 - `GuardianWithoutChildren_GetsAnEmptyList_WithoutQueryingRecords`
+- `OneClick_MarksEveryoneUnmarkedPresent_WithoutTouchingExistingMarks`
 - `OnlyActiveStudents_CanBeMarked`
 - `StudentWhoLeft_KeepsTheirRecord_ButIsNoLongerEnrolled`
 - `TeacherOfTheGroup_MarksTheWholeRoster_InOneSave`
+- `TeacherPanel_ShowsOnlyTheTeachersGroups_WithAttendanceAndPractice`
 - `UnknownStatus_IsRejected`
 
-## Auth (42)
+## Auth (43)
 
 ### AccountAdministrationTests
 
@@ -72,6 +74,7 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 ### AuthAccountTests
 
 - `AddIdentifier_AllowsDifferentTypesOnTheSameAccount`
+- `AddIdentifier_RejectsDuplicateTypeWithinTheAccount`
 - `Create_NormalizesIdentifierUsingInvariantUppercase`
 - `FiveFailures_LockAccountForTenMinutes`
 - `SuccessfulLogin_ResetsFailuresAndLockout`
@@ -155,7 +158,7 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `RolesForAPage_AreResolvedInOneQuery`
 - `UsersInRole_AndCounts_TranslateToSql`
 
-## Courses (93)
+## Courses (96)
 
 ### CourseAdministrationTests
 
@@ -295,6 +298,12 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `SpecificPromotions_UseCurrentWindowAndExistingPriceRules`
 - `VisibilityAndPublicContract_KeepOnlyPublishedCoursesAndOfferings`
 
+### TeachingDirectoryTests
+
+- `GroupSessions_CheckTheAssignmentFirst`
+- `PublishedLessons_AreInCourseOrder`
+- `TeacherGroups_StartFromTheTeachersUserId_InOneJoin`
+
 ## Enrollments (26)
 
 ### EnrollmentDomainTests
@@ -340,6 +349,32 @@ Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `OnlyActiveEnrollments_ShowClasses_WithTeacherNames`
 - `RejectsInvertedOrTooLongRanges`
 - `WithoutActiveEnrollments_DoesNotQueryCourses`
+
+## Exams (27)
+
+### ExerciseTests
+
+- `MultipleChoice_IsCheckedByOptionIndex`
+- `MultipleChoice_NeedsValidOptionsAndAnswer`
+- `Numeric_AcceptsCommaOrPoint`
+- `Numeric_HonoursTheTolerance`
+
+### PracticeQueryTests
+
+- `History_IsPagedNewestFirst`
+- `Solved_IsOneGroupedQuery_WithDistinctExercises`
+- `StudentStatus_IsOneGroupedQuery`
+
+### PracticeUseCaseTests
+
+- `Answering_IsCorrectedHere_ExplainedAndCountedInProgress`
+- `Attempts_AreCappedPerExercise`
+- `CourseProgress_IsPerPublishedLessonAndOverall`
+- `RemovedExercises_AreArchived_KeepingHistory_AndLeaveTheProgress`
+- `Replace_RejectsForeignLessonsExercisesAndBadContent`
+- `TheStudentNeverReceivesTheAnswerBeforeAnswering`
+- `UnreadableAnswers_AreRejectedWithoutBeingRecorded`
+- `WithoutAnActiveEnrollment_OrOnADraftLesson_ThereIsNoPractice`
 
 ## Users (9)
 

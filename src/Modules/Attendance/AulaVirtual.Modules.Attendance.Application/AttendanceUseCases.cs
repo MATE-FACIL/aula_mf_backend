@@ -60,8 +60,7 @@ public sealed class AttendanceUseCases(
         if (access.Status != AttendanceResultStatus.Ok) return Fail<SessionAttendanceView>(access);
         var session = access.Value!;
 
-        var now = timeProvider.GetUtcNow();
-        if (now < session.StartsAt - OpensBeforeStart)
+        if (timeProvider.GetUtcNow() < session.StartsAt - OpensBeforeStart)
             return AttendanceResult<SessionAttendanceView>.Conflict(
                 "Todavía no empieza la clase: la asistencia se abre 15 minutos antes.");
 
@@ -70,26 +69,55 @@ public sealed class AttendanceUseCases(
             return AttendanceResult<SessionAttendanceView>.Invalid(
                 "Solo se puede marcar a alumnos con matrícula activa en este grupo.");
 
-        // Two people may save the same class at once: the unique (class, student) index stops a duplicate,
-        // and the second save reads the first one's rows and applies its changes on top.
-        for (var attempt = 1; ; attempt++)
+        if (!await SaveAsync(session, parsed, actorUserId, onlyUnmarked: false, cancellationToken))
+            return AttendanceResult<SessionAttendanceView>.Conflict("Otra persona está guardando esta asistencia. Vuelve a intentarlo.");
+        return AttendanceResult<SessionAttendanceView>.Ok(await BuildViewAsync(session, cancellationToken));
+    }
+
+    /// <summary>
+    /// «Marcar asistencia en 1 clic» (SCRUM-69): every student with an ACTIVE enrollment who has no mark yet is marked
+    /// present. Marks already set (late, absent, or a correction) are never touched.
+    /// </summary>
+    public async Task<AttendanceResult<SessionAttendanceView>> MarkRemainingPresentAsync(Guid actorUserId, Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var access = await AuthorizeAsync(actorUserId, sessionId, cancellationToken);
+        if (access.Status != AttendanceResultStatus.Ok) return Fail<SessionAttendanceView>(access);
+        var session = access.Value!;
+        if (timeProvider.GetUtcNow() < session.StartsAt - OpensBeforeStart)
+            return AttendanceResult<SessionAttendanceView>.Conflict("Todavía no empieza la clase: la asistencia se abre 15 minutos antes.");
+
+        var enrolled = await roster.GetActiveStudentIdsAsync(session.OfferingId, cancellationToken);
+        var everyone = enrolled.Select(student => (student, AttendanceStatus.Present, (string?)null)).ToList();
+        if (everyone.Count > 0 && !await SaveAsync(session, everyone, actorUserId, onlyUnmarked: true, cancellationToken))
+            return AttendanceResult<SessionAttendanceView>.Conflict("Otra persona está guardando esta asistencia. Vuelve a intentarlo.");
+        return AttendanceResult<SessionAttendanceView>.Ok(await BuildViewAsync(session, cancellationToken));
+    }
+
+    // Two people may save the same class at once: the unique (class, student) index stops a duplicate, and the
+    // second save reads the first one's rows and applies its changes on top. False when it still collides.
+    private async Task<bool> SaveAsync(SessionDetails session, IReadOnlyList<(Guid Student, AttendanceStatus Status, string? Note)> marks,
+        Guid actorUserId, bool onlyUnmarked, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        for (var attempt = 1; attempt <= 2; attempt++)
         {
             var existing = (await records.GetTrackedBySessionAsync(session.SessionId, cancellationToken))
                 .ToDictionary(record => record.StudentUserId);
-            foreach (var (student, status, note) in parsed)
+            foreach (var (student, status, note) in marks)
             {
-                if (existing.TryGetValue(student, out var record)) record.Change(status, note, actorUserId, now);
+                if (existing.TryGetValue(student, out var record))
+                {
+                    if (!onlyUnmarked) record.Change(status, note, actorUserId, now);
+                }
                 else records.Add(AttendanceRecord.Create(Guid.NewGuid(), session.SessionId, session.OfferingId,
                     session.StartsAt, student, status, note, actorUserId, now));
             }
 
-            if (await records.TrySaveChangesAsync(cancellationToken)) break;
-            if (attempt == 2)
-                return AttendanceResult<SessionAttendanceView>.Conflict(
-                    "Otra persona está guardando esta asistencia. Vuelve a intentarlo.");
+            if (await records.TrySaveChangesAsync(cancellationToken)) return true;
         }
 
-        return AttendanceResult<SessionAttendanceView>.Ok(await BuildViewAsync(session, cancellationToken));
+        return false;
     }
 
     private async Task<AttendanceResult<SessionDetails>> AuthorizeAsync(Guid actorUserId, Guid sessionId,

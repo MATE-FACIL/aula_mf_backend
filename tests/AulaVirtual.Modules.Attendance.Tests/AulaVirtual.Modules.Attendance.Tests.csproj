@@ -20,5 +20,6 @@
     <ProjectReference Include="..\..\src\Modules\Attendance\AulaVirtual.Modules.Attendance.Application\AulaVirtual.Modules.Attendance.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Attendance\AulaVirtual.Modules.Attendance.Domain\AulaVirtual.Modules.Attendance.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Attendance\AulaVirtual.Modules.Attendance.Infrastructure\AulaVirtual.Modules.Attendance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Exams\AulaVirtual.Modules.Exams.Application\AulaVirtual.Modules.Exams.Application.csproj" />
   </ItemGroup>
 </Project>

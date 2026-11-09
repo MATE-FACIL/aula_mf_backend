@@ -23,6 +23,17 @@ public interface IEnrollmentRoster
 {
     /// <summary>Students with an ACTIVE enrollment in the edition; one indexed query.</summary>
     Task<IReadOnlyList<Guid>> GetActiveStudentIdsAsync(Guid courseOfferingId, CancellationToken cancellationToken);
+
+    /// <summary>Active enrollments per edition, in one grouped query (teacher panel).</summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountActiveAsync(IReadOnlyCollection<Guid> courseOfferingIds,
+        CancellationToken cancellationToken);
+}
+
+// Cross-module read contract (practice): may this student study this course right now?
+public interface IStudentCourseAccess
+{
+    /// <summary>True with an ACTIVE enrollment in a published group of the course.</summary>
+    Task<bool> CanStudyAsync(Guid studentUserId, Guid courseId, CancellationToken cancellationToken);
 }
 
 public interface IEnrollmentRepository

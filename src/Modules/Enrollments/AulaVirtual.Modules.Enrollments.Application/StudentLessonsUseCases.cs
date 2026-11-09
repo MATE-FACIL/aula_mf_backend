@@ -14,7 +14,7 @@ public sealed class StudentLessonsUseCases(
     IEnrollmentRepository enrollments,
     IOfferingDirectory offerings,
     ICourseContentDirectory content,
-    IMathLevelDirectory levels)
+    IMathLevelDirectory levels) : IStudentCourseAccess
 {
     /// <summary>Three queries: active enrollments, their editions, and the level of those courses.</summary>
     public async Task<IReadOnlyList<StudentCourse>> ListCoursesAsync(Guid studentUserId,
@@ -36,6 +36,15 @@ public sealed class StudentLessonsUseCases(
             .Select(offering => new StudentCourse(offering.CourseId, offering.CourseTitle, offering.Id, offering.Name,
                 levelOf.GetValueOrDefault(offering.CourseId)))
             .ToArray();
+    }
+
+    /// <summary>Two queries: active enrollments and their editions.</summary>
+    public async Task<bool> CanStudyAsync(Guid studentUserId, Guid courseId, CancellationToken cancellationToken)
+    {
+        var offeringIds = await enrollments.GetActiveOfferingIdsAsync(studentUserId, cancellationToken);
+        if (offeringIds.Count == 0) return false;
+        return (await offerings.GetManyAsync(offeringIds, cancellationToken))
+            .Any(offering => offering.IsPublished && offering.CourseId == courseId);
     }
 
     /// <summary>Null when the student is not actively enrolled in the course.</summary>

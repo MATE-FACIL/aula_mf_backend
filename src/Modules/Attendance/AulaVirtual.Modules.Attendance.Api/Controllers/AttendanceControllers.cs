@@ -40,6 +40,14 @@ public sealed class SessionAttendanceController(AttendanceUseCases useCases) : S
         return ToResult(await useCases.MarkAsync(userId, sessionId, request.Records, cancellationToken));
     }
 
+    /// <summary>«Marcar asistencia en 1 clic»: every active student without a mark becomes present; existing marks stay.</summary>
+    [HttpPost("present-all")]
+    public async Task<IActionResult> MarkRemainingPresent(Guid sessionId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        return ToResult(await useCases.MarkRemainingPresentAsync(userId, sessionId, cancellationToken));
+    }
+
     private IActionResult ToResult(AttendanceResult<SessionAttendanceView> result) => result.Status switch
     {
         AttendanceResultStatus.Ok => Ok(result.Value),
@@ -78,5 +86,30 @@ public sealed class FamilyAttendanceController(StudentAttendanceUseCases useCase
     {
         if (!TryGetUser(out var userId)) return Unauthenticated();
         return Ok(await useCases.ForGuardianAsync(userId, cancellationToken));
+    }
+}
+
+// The teacher panel (SCRUM-69): the signed-in teacher's own groups only. Any other account gets an empty list or 404.
+[ApiController]
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/teachers/me/groups")]
+[Authorize]
+public sealed class TeacherPanelController(TeacherPanelUseCases useCases) : SignedInController
+{
+    [HttpGet]
+    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        return Ok(await useCases.ListGroupsAsync(userId, cancellationToken));
+    }
+
+    [HttpGet("{offeringId:guid}")]
+    public async Task<IActionResult> Get(Guid offeringId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        var group = await useCases.GetGroupAsync(userId, offeringId, cancellationToken);
+        return group is null
+            ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found", detail: "No tienes ese grupo asignado.")
+            : Ok(group);
     }
 }

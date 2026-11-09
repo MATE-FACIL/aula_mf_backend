@@ -17,8 +17,13 @@ services:
       RUSTFS_ADDRESS: 0.0.0.0:9000
     ports:
       - "127.0.0.1:9000:9000"
+    # En memoria (tmpfs): al apagar el contenedor no queda ningún archivo en el disco ni en un volumen.
+    # mode 1777: RustFS corre con un usuario sin privilegios y necesita escribir ahí.
     volumes:
-      - s3data:/data
+      - type: tmpfs
+        target: /data
+        tmpfs:
+          mode: 01777
     healthcheck:
       # Responde (aunque sea 403 sin credenciales) cuando ya está escuchando.
       test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9000/"]
@@ -69,5 +74,3 @@ services:
       Storage__R2__MaxDirectUploadBytes: "2147483648"
       Storage__R2__MaxPresignedUrlSeconds: "3600"
 
-volumes:
-  s3data:
