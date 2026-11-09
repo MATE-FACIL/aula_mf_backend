@@ -57,10 +57,26 @@ export async function request(method, path, payload, token = admin) {
   return { status: res.status, json, headers: res.headers };
 }
 
-export const login = async (kind, credentials) => {
-  const res = await fetch(`${api}/auth/${kind}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(credentials) });
-  return { status: res.status, token: (await res.json()).accessToken, cookies: res.headers.getSetCookie() };
-};
+const LOGIN_WINDOW_MS = 61_000;
+
+/**
+ * Real login. The API allows 10 logins per minute per IP (fixed window), so on 429 this waits for the next
+ * window instead of skipping the limit. Any other failure stops the suite: a missing token must never fall
+ * back to the administrator's (request() uses the admin token when none is given).
+ */
+export async function login(kind, credentials) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${api}/auth/${kind}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(credentials) });
+    if (res.status === 429 && attempt <= 2) {
+      console.log('     (límite de ingresos de la API: espero la siguiente ventana)');
+      await new Promise((done) => setTimeout(done, LOGIN_WINDOW_MS));
+      continue;
+    }
+    const body = await res.json().catch(() => ({}));
+    if (res.status !== 200 || !body.accessToken) throw new Error(`Login ${kind} falló con ${res.status}`);
+    return { status: res.status, token: body.accessToken, cookies: res.headers.getSetCookie() };
+  }
+}
 
 let failures = 0;
 export const check = (name, ok, detail) => {
