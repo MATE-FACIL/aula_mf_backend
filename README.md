@@ -40,10 +40,23 @@ Las dos primeras son imprescindibles: sin ellas la API falla al arrancar o en la
 | `Storage__R2__PublicBaseUrl` | No | URL HTTPS pública del bucket público |
 | `Storage__R2__AllowedContentTypes__0`, `__1`… | Si R2 | Tipos MIME permitidos (al menos uno) |
 | `Storage__R2__MaxBackendUploadBytes` · `Storage__R2__MaxDirectUploadBytes` | Si R2 | Tamaño máximo de subida, mayor que 0 |
-| `Storage__R2__MaxPresignedUrlSeconds` | Si R2 | Vigencia de las URL firmadas (1 a 604800) |
+| `Storage__R2__MaxPresignedUrlSeconds` | Si R2 | Vigencia de las URL firmadas (1 a 604800). Debe ser al menos 900: los enlaces de las lecciones duran 15 minutos |
+| `Storage__R2__AllowHttpEndpoint` | No | Solo desarrollo: permite un servidor S3 local por HTTP. Fuera de `Development` la API no arranca con esta opción |
 | `Courses__Cover__MaxBytes` · `Courses__Cover__AllowedContentTypes__0`… | No | Límites de portadas (por defecto 5 MB; jpeg, png, webp) |
 
 Con `Storage__R2__Enabled=true` y algún dato inválido, la API falla al arrancar.
+
+Los archivos de las lecciones (SCRUM-58) aceptan PDF, PNG, JPG, WebP, Word, PowerPoint y Excel, además de videos MP4 y WebM. Esos tipos también deben estar en `Storage__R2__AllowedContentTypes`, y `Storage__R2__MaxDirectUploadBytes` debe permitir videos de hasta 2 GB. Como el navegador sube directo a R2, el bucket privado necesita una regla CORS que permita `PUT` desde el origen del aula.
+
+### Almacenamiento local
+
+Para probar los archivos sin R2 hay un servidor S3 local (RustFS):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d --build
+```
+
+Sin ese archivo, la API funciona igual, pero las subidas de archivos responden 503.
 
 ## Estructura
 

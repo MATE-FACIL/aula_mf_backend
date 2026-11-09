@@ -1,5 +1,6 @@
 // Utilidades de las pruebas contra la API real en Docker. Ver docs/pruebas/README.md.
 import { execFileSync } from 'node:child_process';
+import http from 'node:http';
 import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -87,3 +88,26 @@ export const finish = () => {
   console.log(failures ? `\n${failures} fallos` : '\nTodo OK');
   process.exit(failures ? 1 : 0);
 };
+
+/**
+ * Request to a signed storage URL. The signature covers the host name, so it is kept as is; only the connection
+ * goes to 127.0.0.1, where docker-compose.storage.yml publishes the local server (never to the whole network).
+ */
+export function storageRequest(url, { method = 'GET', headers = {}, body } = {}) {
+  const target = new URL(url);
+  return new Promise((resolve, reject) => {
+    const req = http.request(target, {
+      method,
+      headers: { ...headers, ...(body && { 'Content-Length': body.length }) },
+      lookup: (hostname, options, callback) =>
+        options?.all ? callback(null, [{ address: '127.0.0.1', family: 4 }]) : callback(null, '127.0.0.1', 4),
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks) }));
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}

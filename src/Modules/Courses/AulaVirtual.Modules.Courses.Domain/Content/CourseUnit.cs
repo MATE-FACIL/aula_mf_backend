@@ -86,6 +86,14 @@ internal static class ContentRules
         return trimmed;
     }
 
+    public static StoredFile File(StoredFile file, string name)
+    {
+        RequireId(file.FileId, name);
+        if (string.IsNullOrWhiteSpace(file.ContentType) || file.Size <= 0)
+            throw new ArgumentException("El archivo subido no es válido.", name);
+        return file with { ContentType = file.ContentType.Trim() };
+    }
+
     public static int Position(int position) =>
         position < 1 ? throw new ArgumentOutOfRangeException(nameof(position), "Positions start at 1.") : position;
 }

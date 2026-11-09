@@ -1,10 +1,16 @@
 using AulaVirtual.Modules.Courses.Domain.Content;
+using Microsoft.Extensions.Logging;
 
 namespace AulaVirtual.Modules.Courses.Application.Content;
 
-// Administration of a course's units and lessons (SCRUM-55). Content is written once and read many times,
-// so every change is small and targeted; the read side builds the whole course in a fixed number of queries.
-public sealed class CourseContentUseCases(ICourseContentRepository repository, TimeProvider timeProvider)
+// Administration of a course's units and lessons (SCRUM-55) and of their files (SCRUM-58). Content is written
+// once and read many times, so every change is small and targeted; the read side builds the whole course in a
+// fixed number of queries.
+public sealed class CourseContentUseCases(
+    ICourseContentRepository repository,
+    LessonFiles files,
+    TimeProvider timeProvider,
+    ILogger<CourseContentUseCases> logger)
 {
     public const int MaxUnitsPerCourse = 30;
     public const int MaxLessonsPerCourse = 200;
@@ -12,12 +18,15 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
     private const string CourseNotFound = "No encontramos ese curso.";
     private const string UnitNotFound = "No encontramos esa unidad en el curso.";
     private const string LessonNotFound = "No encontramos esa lección en el curso.";
+    private const string StorageUnavailable = "El almacenamiento de archivos no está configurado en este ambiente.";
 
     public async Task<ContentResult<CourseContentView>> GetContentAsync(Guid courseId,
         CancellationToken cancellationToken)
     {
         var content = await repository.GetContentAsync(courseId, cancellationToken);
-        return content is null ? ContentResult<CourseContentView>.NotFound(CourseNotFound) : ContentResult<CourseContentView>.Ok(content);
+        return content is null
+            ? ContentResult<CourseContentView>.NotFound(CourseNotFound)
+            : ContentResult<CourseContentView>.Ok(await files.SignAsync(content, cancellationToken));
     }
 
     public async Task<ContentResult<UnitView>> AddUnitAsync(Guid courseId, string title,
@@ -85,9 +94,13 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         return await GetContentAsync(courseId, cancellationToken);
     }
 
-    public async Task<ContentResult<LessonView>> AddLessonAsync(Guid courseId, Guid unitId, LessonContent content,
+    /// <summary>A new lesson has no files yet: they are uploaded for an existing lesson, then attached with an update.</summary>
+    public async Task<ContentResult<LessonView>> AddLessonAsync(Guid courseId, Guid unitId, LessonInput input,
         CancellationToken cancellationToken)
     {
+        if (input.VideoFileId is not null || input.Materials.Any(material => material.FileId is not null))
+            return ContentResult<LessonView>.Invalid("Crea la lección primero y después sube sus archivos.");
+
         var unit = await repository.GetUnitAsync(courseId, unitId, cancellationToken);
         if (unit is null) return ContentResult<LessonView>.NotFound(UnitNotFound);
         if (await repository.CountLessonsAsync(courseId, cancellationToken) >= MaxLessonsPerCourse)
@@ -96,7 +109,8 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         var position = await repository.NextLessonPositionAsync(unitId, cancellationToken);
         var saved = await Guarded(async () =>
         {
-            var lesson = Lesson.Create(Guid.NewGuid(), courseId, unitId, position, content, timeProvider.GetUtcNow());
+            var lesson = Lesson.Create(Guid.NewGuid(), courseId, unitId, position, ToContent(input, null, new Dictionary<Guid, StoredFile>()),
+                timeProvider.GetUtcNow());
             repository.Add(lesson);
             await repository.SaveChangesAsync(cancellationToken);
             return lesson.Id;
@@ -104,9 +118,12 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         return await WithNumberAsync(courseId, saved, cancellationToken);
     }
 
-    /// <summary>Replaces the lesson's content; a different <paramref name="unitId"/> moves it to the end of that unit.</summary>
+    /// <summary>
+    /// Replaces the lesson's content; a different <paramref name="unitId"/> moves it to the end of that unit. Files
+    /// the lesson no longer uses are deleted from storage after the change is saved.
+    /// </summary>
     public async Task<ContentResult<LessonView>> UpdateLessonAsync(Guid courseId, Guid lessonId, Guid unitId,
-        LessonContent content, CancellationToken cancellationToken)
+        LessonInput input, CancellationToken cancellationToken)
     {
         var lesson = await repository.GetLessonAsync(courseId, lessonId, cancellationToken);
         if (lesson is null) return ContentResult<LessonView>.NotFound(LessonNotFound);
@@ -116,14 +133,20 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
             return ContentResult<LessonView>.NotFound(UnitNotFound);
         var position = moving ? await repository.NextLessonPositionAsync(unitId, cancellationToken) : lesson.Position;
 
+        var previous = lesson.Files();
+        var resolved = await ResolveFilesAsync(courseId, lessonId, input, previous, cancellationToken);
+        if (resolved.Status != ContentResultStatus.Ok) return new ContentResult<LessonView>(resolved.Status, null, resolved.Detail);
+
         var saved = await Guarded(async () =>
         {
             var now = timeProvider.GetUtcNow();
-            lesson.Update(content, now);
+            lesson.Update(resolved.Value!, now);
             if (moving) lesson.MoveTo(unitId, position, now);
             await repository.SaveChangesAsync(cancellationToken);
             return lesson.Id;
         });
+        if (saved.Status == ContentResultStatus.Ok)
+            await DeleteUnusedAsync(courseId, lessonId, previous.Keys.Except(lesson.Files().Keys), cancellationToken);
         return await WithNumberAsync(courseId, saved, cancellationToken);
     }
 
@@ -133,8 +156,10 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         var lesson = await repository.GetLessonAsync(courseId, lessonId, cancellationToken);
         if (lesson is null) return ContentResult<bool>.NotFound(LessonNotFound);
 
+        var lessonFiles = lesson.Files().Keys.ToArray();
         repository.Remove(lesson);
         await repository.SaveChangesAsync(cancellationToken);
+        await DeleteUnusedAsync(courseId, lessonId, lessonFiles, cancellationToken);
         return ContentResult<bool>.Ok(true);
     }
 
@@ -154,6 +179,85 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         for (var index = 0; index < lessonIds.Count; index++) byId[lessonIds[index]].MoveTo(unitId, index + 1, now);
         await repository.SaveChangesAsync(cancellationToken);
         return await GetContentAsync(courseId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Grants a direct upload of a video or material for an existing lesson (SCRUM-58). The file is attached by
+    /// sending its id in the next lesson update, which checks it again in storage.
+    /// </summary>
+    public async Task<ContentResult<UploadGrant>> GrantUploadAsync(Guid courseId, Guid lessonId, string? kind,
+        string? contentType, long size, CancellationToken cancellationToken)
+    {
+        if (!LessonFileRules.TryParseKind(kind, out var fileKind))
+            return ContentResult<UploadGrant>.Invalid("Indica si el archivo es «video» o «material».");
+        if (LessonFileRules.Problem(fileKind, contentType, size) is { } problem)
+            return ContentResult<UploadGrant>.Invalid(problem);
+        if (!files.Available) return ContentResult<UploadGrant>.Unavailable(StorageUnavailable);
+        if (await repository.GetLessonAsync(courseId, lessonId, cancellationToken) is null)
+            return ContentResult<UploadGrant>.NotFound(LessonNotFound);
+
+        try
+        {
+            return ContentResult<UploadGrant>.Ok(await files.GrantUploadAsync(courseId, lessonId, fileKind, contentType!,
+                size, cancellationToken));
+        }
+        catch (ArgumentException)
+        {
+            // Our rules allow it but this environment's storage configuration does not (AllowedContentTypes / size).
+            return ContentResult<UploadGrant>.Invalid("El almacenamiento de este ambiente no acepta ese tipo o tamaño de archivo.");
+        }
+    }
+
+    // Files already in the lesson are kept as they are; new ones must exist in storage and follow the rules.
+    private async Task<ContentResult<LessonContent>> ResolveFilesAsync(Guid courseId, Guid lessonId, LessonInput input,
+        IReadOnlyDictionary<Guid, StoredFile> known, CancellationToken cancellationToken)
+    {
+        var references = input.Materials.Where(material => material.FileId is not null)
+            .Select(material => (Id: material.FileId!.Value, Kind: LessonFileKind.Material, material.Title))
+            .ToList();
+        if (input.VideoFileId is { } videoId) references.Add((videoId, LessonFileKind.Video, "video"));
+        if (references.Select(reference => reference.Id).Distinct().Count() != references.Count)
+            return ContentResult<LessonContent>.Invalid("Cada archivo se puede usar una sola vez en la lección.");
+
+        var unknown = references.Where(reference => !known.ContainsKey(reference.Id)).ToArray();
+        if (unknown.Length > 0 && !files.Available) return ContentResult<LessonContent>.Unavailable(StorageUnavailable);
+
+        // One storage lookup per new file, all at the same time.
+        var found = await Task.WhenAll(unknown.Select(async reference =>
+            (reference, info: await files.FindAsync(courseId, lessonId, reference.Id, cancellationToken))));
+
+        var resolved = new Dictionary<Guid, StoredFile>(known);
+        foreach (var (reference, info) in found)
+        {
+            if (info is null)
+                return ContentResult<LessonContent>.Invalid($"No encontramos el archivo de «{reference.Title}»: vuelve a subirlo.");
+            resolved[reference.Id] = new StoredFile(reference.Id, info.ContentType, info.Size);
+        }
+
+        foreach (var reference in references)
+        {
+            var file = resolved[reference.Id];
+            if (LessonFileRules.Problem(reference.Kind, file.ContentType, file.Size) is { } problem)
+                return ContentResult<LessonContent>.Invalid($"«{reference.Title}»: {problem}");
+        }
+
+        return ContentResult<LessonContent>.Ok(ToContent(input, input.VideoFileId is { } video ? resolved[video] : null, resolved));
+    }
+
+    private static LessonContent ToContent(LessonInput input, StoredFile? videoFile, IReadOnlyDictionary<Guid, StoredFile> resolved) =>
+        new(input.Title, input.Summary, input.VideoUrl, input.IsPublished,
+            input.Materials.Select(material => new MaterialContent(material.Title, material.Url,
+                material.FileId is { } fileId ? resolved[fileId] : null)).ToArray(),
+            videoFile);
+
+    private async Task DeleteUnusedAsync(Guid courseId, Guid lessonId, IEnumerable<Guid> fileIds,
+        CancellationToken cancellationToken)
+    {
+        var unused = fileIds.ToArray();
+        if (unused.Length == 0) return;
+        var failed = await files.DeleteAsync(courseId, lessonId, unused, cancellationToken);
+        if (failed > 0)
+            logger.LogWarning("Could not delete {Failed} of {Total} unused files of lesson {LessonId}.", failed, unused.Length, lessonId);
     }
 
     private static bool IsPermutation(IReadOnlyList<Guid>? requested, IEnumerable<Guid> existing)
@@ -186,8 +290,8 @@ public sealed class CourseContentUseCases(ICourseContentRepository repository, T
         CancellationToken cancellationToken)
     {
         if (saved.Status != ContentResultStatus.Ok) return new ContentResult<LessonView>(saved.Status, null, saved.Detail);
-        var content = await repository.GetContentAsync(courseId, cancellationToken);
-        var lesson = content?.Units.SelectMany(unit => unit.Lessons).SingleOrDefault(item => item.Id == saved.Value);
+        var content = await GetContentAsync(courseId, cancellationToken);
+        var lesson = content.Value?.Units.SelectMany(unit => unit.Lessons).SingleOrDefault(item => item.Id == saved.Value);
         return lesson is null ? ContentResult<LessonView>.NotFound(LessonNotFound) : ContentResult<LessonView>.Ok(lesson);
     }
 }

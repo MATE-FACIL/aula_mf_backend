@@ -30,7 +30,10 @@ internal sealed class LessonConfiguration : IEntityTypeConfiguration<Lesson>
     public void Configure(EntityTypeBuilder<Lesson> builder)
     {
         builder.ToTable("lessons", "courses", table =>
-            table.HasCheckConstraint("ck_lessons_position", "position >= 1"));
+        {
+            table.HasCheckConstraint("ck_lessons_position", "position >= 1");
+            table.HasCheckConstraint("ck_lessons_video_link_or_file", "video_url IS NULL OR video_file_id IS NULL");
+        });
         builder.HasKey(lesson => lesson.Id).HasName("pk_lessons");
         builder.Property(lesson => lesson.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(lesson => lesson.CourseId).HasColumnName("course_id").IsRequired();
@@ -38,6 +41,9 @@ internal sealed class LessonConfiguration : IEntityTypeConfiguration<Lesson>
         builder.Property(lesson => lesson.Title).HasColumnName("title").HasMaxLength(Lesson.MaxTitleLength).IsRequired();
         builder.Property(lesson => lesson.Summary).HasColumnName("summary").HasMaxLength(Lesson.MaxSummaryLength);
         builder.Property(lesson => lesson.VideoUrl).HasColumnName("video_url").HasMaxLength(2048);
+        builder.Property(lesson => lesson.VideoFileId).HasColumnName("video_file_id");
+        builder.Property(lesson => lesson.VideoContentType).HasColumnName("video_content_type").HasMaxLength(100);
+        builder.Property(lesson => lesson.VideoSize).HasColumnName("video_size");
         builder.Property(lesson => lesson.Position).HasColumnName("position").IsRequired();
         builder.Property(lesson => lesson.IsPublished).HasColumnName("is_published").IsRequired();
         builder.Property(lesson => lesson.CreatedAt).HasColumnName("created_at").IsRequired();
@@ -71,7 +77,13 @@ internal sealed class LessonMaterialConfiguration : IEntityTypeConfiguration<Les
         builder.Property(material => material.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(material => material.LessonId).HasColumnName("lesson_id").IsRequired();
         builder.Property(material => material.Title).HasColumnName("title").HasMaxLength(LessonMaterial.MaxTitleLength).IsRequired();
-        builder.Property(material => material.Url).HasColumnName("url").HasMaxLength(2048).IsRequired();
+        builder.Property(material => material.Url).HasColumnName("url").HasMaxLength(2048);
+        builder.Property(material => material.FileId).HasColumnName("file_id");
+        builder.Property(material => material.ContentType).HasColumnName("content_type").HasMaxLength(100);
+        builder.Property(material => material.Size).HasColumnName("size");
+        // A material is a link or an uploaded file, never both and never neither.
+        builder.ToTable(table => table.HasCheckConstraint("ck_lesson_materials_link_or_file",
+            "(url IS NOT NULL AND file_id IS NULL) OR (url IS NULL AND file_id IS NOT NULL AND content_type IS NOT NULL AND size > 0)"));
         builder.Property(material => material.Position).HasColumnName("position").IsRequired();
         builder.HasIndex(material => new { material.LessonId, material.Position }).HasDatabaseName("ix_lesson_materials_lesson_position");
     }

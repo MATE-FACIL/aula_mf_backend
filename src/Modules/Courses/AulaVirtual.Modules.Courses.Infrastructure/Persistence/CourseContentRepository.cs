@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence;
 
-public sealed class CourseContentRepository(CoursesDbContext db) : ICourseContentRepository, ICourseContentDirectory
+// Raw reads: uploaded files come back with their id only; LessonFiles turns them into signed URLs.
+public sealed class CourseContentRepository(CoursesDbContext db) : ICourseContentRepository
 {
     public Task<bool> CourseExistsAsync(Guid courseId, CancellationToken cancellationToken) =>
         db.Courses.AsNoTracking().AnyAsync(course => course.Id == courseId, cancellationToken);
@@ -74,7 +75,8 @@ public sealed class CourseContentRepository(CoursesDbContext db) : ICourseConten
             .OrderBy(lesson => lesson.Position).ThenBy(lesson => lesson.CreatedAt)
             .Select(lesson => new
             {
-                lesson.Id, lesson.UnitId, lesson.Title, lesson.Summary, lesson.VideoUrl, lesson.IsPublished
+                lesson.Id, lesson.UnitId, lesson.Title, lesson.Summary, lesson.VideoUrl, lesson.IsPublished,
+                lesson.VideoFileId, lesson.VideoContentType
             })
             .ToListAsync(cancellationToken);
 
@@ -84,7 +86,7 @@ public sealed class CourseContentRepository(CoursesDbContext db) : ICourseConten
             : await db.LessonMaterials.AsNoTracking()
                 .Where(material => lessonIds.Contains(material.LessonId))
                 .OrderBy(material => material.Position)
-                .Select(material => new { material.Id, material.LessonId, material.Title, material.Url })
+                .Select(material => new { material.Id, material.LessonId, material.Title, material.Url, material.FileId, material.ContentType, material.Size })
                 .ToListAsync(cancellationToken);
 
         var materialsByLesson = materials.ToLookup(material => material.LessonId);
@@ -96,7 +98,10 @@ public sealed class CourseContentRepository(CoursesDbContext db) : ICourseConten
             var unitLessons = lessonsByUnit[unit.Id]
                 .Select(lesson => new LessonView(lesson.Id, lesson.UnitId, ++number, lesson.Title, lesson.Summary,
                     lesson.VideoUrl, lesson.IsPublished,
-                    materialsByLesson[lesson.Id].Select(item => new MaterialView(item.Id, item.Title, item.Url)).ToArray()))
+                    materialsByLesson[lesson.Id]
+                        .Select(item => new MaterialView(item.Id, item.Title, item.Url, item.FileId, item.ContentType, item.Size))
+                        .ToArray(),
+                    lesson.VideoFileId, lesson.VideoContentType))
                 .ToArray();
             // Students never see an empty unit; the administrator sees every unit to fill it in.
             if (publishedOnly && unitLessons.Length == 0) continue;

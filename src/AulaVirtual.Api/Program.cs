@@ -25,7 +25,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
 builder.Services.AddPublicApi(builder.Configuration);
 builder.Services.AddOpenApi("v1");
-builder.Services.AddFileStorage(builder.Configuration);
+builder.Services.AddFileStorage(builder.Configuration, builder.Environment.IsDevelopment());
 
 builder.Services
     .AddApiVersioning(options =>

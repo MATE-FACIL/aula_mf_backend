@@ -1,19 +1,21 @@
 # Pruebas del backend
 
-Resultados del 9 de noviembre de 2026 sobre el commit `fdba55c` de la rama `feat/scrum-53-55-asistencia-lecciones`.
+Resultados del 9 de noviembre de 2026 sobre el último commit de la rama `feat/scrum-39-58-niveles-archivos`.
 
 | Prueba | Dónde corre | Resultado |
 |---|---|---|
-| Unitarias y de integración (`dotnet test`) | En memoria | **206 de 206** |
+| Unitarias y de integración (`dotnet test`) | En memoria | **227 de 227** |
 | Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **24 de 24** |
 | Grupos y horarios (SCRUM-41, SCRUM-42) | API en Docker con PostgreSQL 17 | **17 de 17** |
 | Clases del alumno (SCRUM-50, SCRUM-51) | API en Docker con PostgreSQL 17 | **11 de 11** |
 | Familia (SCRUM-67, SCRUM-35) | API en Docker con PostgreSQL 17 | **6 de 6** |
 | Lecciones (SCRUM-55) | API en Docker con PostgreSQL 17 | **19 de 19** |
 | Asistencia (SCRUM-53) | API en Docker con PostgreSQL 17 | **14 de 14** |
-| Recorrido en navegador real | Aula conectada a la API en Docker | **50 de 50**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
+| Niveles de Matemáticas (SCRUM-39) | API en Docker con PostgreSQL 17 | **9 de 9** |
+| Archivos de las lecciones (SCRUM-58) | API en Docker con almacenamiento S3 local (RustFS) | **14 de 14** |
+| Recorrido en navegador real | Aula conectada a la API en Docker | **52 de 52**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
 
-Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
+Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Esa base no tiene almacenamiento, así que la suite de archivos se omite allí; la de archivos corre con `docker-compose.storage.yml`. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
 
 ## Pruebas por módulo
 
@@ -21,15 +23,15 @@ Las pruebas contra la API también pasaron en una base nueva, preparada igual qu
 |---|---:|
 | Administration | 18 |
 | Attendance | 21 |
-| Auth | 43 |
+| Auth | 42 |
 | Authorization | 12 |
-| Courses | 73 |
+| Courses | 93 |
 | Enrollments | 26 |
 | Users | 9 |
-| SharedKernel.Storage | 4 |
-| **Total** | **206** |
+| SharedKernel.Storage | 6 |
+| **Total** | **227** |
 
-La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones y asistencia están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md).
+La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones, archivos, niveles y asistencia están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md).
 
 ## Pruebas contra la API real
 
@@ -135,6 +137,35 @@ Cada corrida crea sus propios datos ficticios en PostgreSQL. Esto es lo que se c
 - la familia ve solo a su hija
 - otra familia no ve nada
 
+### Niveles de Matemáticas
+
+- hay 8 niveles: 4 de primaria y 4 de secundaria
+- crear los niveles que faltan
+- repetir no crea nada nuevo
+- cada nivel tiene al menos sus 14 sesiones
+- nombres claros por etapa y nivel
+- primaria 60 min y secundaria 90 min por clase
+- las sesiones están en orden y numeradas
+- el alumno ve su nivel de Matemáticas
+- el alumno no administra niveles → 403
+
+### Archivos de las lecciones
+
+- permiso de subida para un PDF
+- la subida va directo al almacenamiento
+- tipo no permitido → 400
+- material de más de 50 MB → 400
+- video de más de 2 GB → 400
+- un archivo que nunca se subió → 400
+- la lección guarda video, archivo y enlace
+- el alumno matriculado recibe enlaces firmados que vencen en 15 min
+- el enlace firmado descarga el archivo
+- sin matrícula activa no hay enlaces → 404
+- el archivo sin firma no se puede descargar
+- reemplazar el archivo
+- el archivo reemplazado ya no existe
+- borrar la lección elimina sus archivos
+
 ### Familia
 
 - el padre ve solo sus 2 hijos
@@ -159,6 +190,9 @@ cp .env.example .env          # completa los valores
 docker compose up -d --build
 sh tests/e2e/setup-admin.sh   # solo en una base nueva
 node tests/e2e/run.mjs
+
+# Con almacenamiento local, para que también corra la suite de archivos:
+docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d --build
 ```
 
 Cada corrida deja sus datos ficticios en la base. El CI las corre en cada pull request, en el job «Container image and smoke test».

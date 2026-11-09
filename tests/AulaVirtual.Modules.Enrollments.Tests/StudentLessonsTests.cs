@@ -1,4 +1,5 @@
 using AulaVirtual.Modules.Courses.Application.Content;
+using AulaVirtual.Modules.Courses.Application.Levels;
 using AulaVirtual.Modules.Courses.Application.Offerings;
 using AulaVirtual.Modules.Enrollments.Application;
 using AulaVirtual.Modules.Enrollments.Domain;
@@ -12,7 +13,7 @@ public sealed class StudentLessonsTests
     private readonly Guid lab = Guid.NewGuid();
     private readonly Fakes fakes = new();
 
-    private StudentLessonsUseCases UseCases() => new(fakes, fakes, fakes);
+    private StudentLessonsUseCases UseCases() => new(fakes, fakes, fakes, fakes);
 
     [Fact]
     public async Task ActiveCourse_ShowsItsPublishedLessons()
@@ -24,6 +25,7 @@ public sealed class StudentLessonsTests
         var content = await UseCases().GetLessonsAsync(student, math, default);
 
         Assert.Equal(math, Assert.Single(courses).CourseId);
+        Assert.Equal("intermediate", courses[0].Level?.Level);
         Assert.Equal(math, content!.CourseId);
         Assert.Equal([math], fakes.ContentRequests);
     }
@@ -49,8 +51,11 @@ public sealed class StudentLessonsTests
         Assert.Null(await UseCases().GetLessonsAsync(student, lab, default));
     }
 
-    private sealed class Fakes : IEnrollmentRepository, IOfferingDirectory, ICourseContentDirectory
+    private sealed class Fakes : IEnrollmentRepository, IOfferingDirectory, ICourseContentDirectory, IMathLevelDirectory
     {
+        public Task<IReadOnlyList<LevelOfCourse>> GetLevelsAsync(IReadOnlyCollection<Guid> courseIds, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LevelOfCourse>>(courseIds.Select(id => new LevelOfCourse(id, "secondary", "intermediate", "Secundaria", "Intermedio")).ToList());
+
         public Dictionary<Guid, IReadOnlyList<Guid>> Active { get; } = [];
         public List<Guid> ContentRequests { get; } = [];
         private readonly List<OfferingSummary> offerings = [];

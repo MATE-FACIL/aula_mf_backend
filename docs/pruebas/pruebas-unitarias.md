@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
+Las 227 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -56,7 +56,7 @@ Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `TeacherOfTheGroup_MarksTheWholeRoster_InOneSave`
 - `UnknownStatus_IsRejected`
 
-## Auth (43)
+## Auth (42)
 
 ### AccountAdministrationTests
 
@@ -72,7 +72,6 @@ Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 ### AuthAccountTests
 
 - `AddIdentifier_AllowsDifferentTypesOnTheSameAccount`
-- `AddIdentifier_RejectsDuplicateTypeWithinTheAccount`
 - `Create_NormalizesIdentifierUsingInvariantUppercase`
 - `FiveFailures_LockAccountForTenMinutes`
 - `SuccessfulLogin_ResetsFailuresAndLockout`
@@ -156,7 +155,7 @@ Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `RolesForAPage_AreResolvedInOneQuery`
 - `UsersInRole_AndCounts_TranslateToSql`
 
-## Courses (73)
+## Courses (93)
 
 ### CourseAdministrationTests
 
@@ -248,6 +247,30 @@ Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `Update_ReplacesMaterials_AndABadMaterialChangesNothing`
 - `Video_MustBeHttps`
 
+### LessonFileRulesTests
+
+- `AMaterialIsALinkOrAFile_NeverBothOrNeither`
+- `TheVideoIsALinkOrAFile_NotBoth`
+- `TypesAndSizes_DependOnTheKind`
+
+### LessonFilesUseCaseTests
+
+- `AFileThatWasNeverUploaded_OrBreaksTheRules_IsRejected`
+- `ANewLesson_CannotCarryFiles_YetBecauseTheyBelongToTheLesson`
+- `ReplacedAndDeletedFiles_AreRemovedFromStorage`
+- `Upload_IsGrantedOnlyForAllowedFiles_OfAnExistingLesson`
+- `UploadedFiles_AreAttached_WithWhatStorageReallyHolds_AndSigned`
+- `WithoutStorage_UploadsAreUnavailable_ButLinksStillWork`
+
+### MathLevelTests
+
+- `ConcurrentProvision_IsReportedWithoutSavingHalfTheLevels`
+- `Levels_AndLessonCounts_AreTwoQueries`
+- `Provision_CreatesEveryLevelWithItsFourteenDraftSessions_InOneSave`
+- `Provision_IsSafeToRepeat_AndOnlyFillsWhatIsMissing`
+- `Provision_ReusesTheMathematicsCategory`
+- `ThereAreFourLevelsPerStage_WithTheirClassLength`
+
 ### OfferingDirectoryQueryTests
 
 - `GetMany_UsesOneQuery`
@@ -338,11 +361,13 @@ Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 
 - `UsersModel_UsesConfirmedSchemaTableAndFilteredUniqueIndex`
 
-## SharedKernel.Storage (4)
+## SharedKernel.Storage (6)
 
 ### StorageTests
 
 - `Configuration_Rejects_Invalid_And_Selects_Separate_Buckets`
 - `Disabled_Storage_Does_Not_Register_Adapter`
+- `HttpEndpoint_IsOnlyAllowedInDevelopment`
 - `Keys_Are_Server_Shaped_And_Reject_Traversal`
+- `SignedLinks_FollowTheEndpointScheme`
 - `Signed_Grants_Are_Scoped_And_Contain_No_Secret_Key`

@@ -8,12 +8,13 @@ namespace AulaVirtual.SharedKernel.Infrastructure.Storage;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration,
+        bool isDevelopment = false)
     {
         var options = configuration.GetSection(R2StorageOptions.SectionName).Get<R2StorageOptions>()
             ?? new R2StorageOptions();
         if (!options.Enabled) return services;
-        options.Validate();
+        options.Validate(isDevelopment);
         services.AddSingleton(options);
         services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
             new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey),

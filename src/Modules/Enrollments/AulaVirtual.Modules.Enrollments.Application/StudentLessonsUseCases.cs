@@ -1,9 +1,11 @@
 using AulaVirtual.Modules.Courses.Application.Content;
+using AulaVirtual.Modules.Courses.Application.Levels;
 using AulaVirtual.Modules.Courses.Application.Offerings;
 
 namespace AulaVirtual.Modules.Enrollments.Application;
 
-public sealed record StudentCourse(Guid CourseId, string CourseTitle, Guid OfferingId, string OfferingName);
+/// <summary><paramref name="Level"/>: the Mathematics level of the course (SCRUM-39), or null for any other course.</summary>
+public sealed record StudentCourse(Guid CourseId, string CourseTitle, Guid OfferingId, string OfferingName, LevelOfCourse? Level = null);
 
 // What a student may study (SCRUM-55): the courses of their ACTIVE enrollments in published groups, and the
 // published lessons of each. Another course, a pending enrollment or a draft lesson are simply not there:
@@ -11,19 +13,28 @@ public sealed record StudentCourse(Guid CourseId, string CourseTitle, Guid Offer
 public sealed class StudentLessonsUseCases(
     IEnrollmentRepository enrollments,
     IOfferingDirectory offerings,
-    ICourseContentDirectory content)
+    ICourseContentDirectory content,
+    IMathLevelDirectory levels)
 {
-    /// <summary>Two queries: active enrollments, then their editions.</summary>
+    /// <summary>Three queries: active enrollments, their editions, and the level of those courses.</summary>
     public async Task<IReadOnlyList<StudentCourse>> ListCoursesAsync(Guid studentUserId,
         CancellationToken cancellationToken)
     {
         var offeringIds = await enrollments.GetActiveOfferingIdsAsync(studentUserId, cancellationToken);
         if (offeringIds.Count == 0) return [];
 
-        return (await offerings.GetManyAsync(offeringIds, cancellationToken))
+        var published = (await offerings.GetManyAsync(offeringIds, cancellationToken))
             .Where(offering => offering.IsPublished)
+            .ToArray();
+        if (published.Length == 0) return [];
+
+        // Same DbContext (Courses) as the editions: one after the other.
+        var levelOf = (await levels.GetLevelsAsync(published.Select(offering => offering.CourseId).ToHashSet(), cancellationToken))
+            .ToDictionary(level => level.CourseId);
+        return published
             .OrderBy(offering => offering.CourseTitle, StringComparer.CurrentCultureIgnoreCase)
-            .Select(offering => new StudentCourse(offering.CourseId, offering.CourseTitle, offering.Id, offering.Name))
+            .Select(offering => new StudentCourse(offering.CourseId, offering.CourseTitle, offering.Id, offering.Name,
+                levelOf.GetValueOrDefault(offering.CourseId)))
             .ToArray();
     }
 

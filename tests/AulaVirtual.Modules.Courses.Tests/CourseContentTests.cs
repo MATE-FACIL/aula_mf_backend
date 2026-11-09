@@ -3,6 +3,7 @@ using AulaVirtual.Modules.Courses.Domain.Content;
 using AulaVirtual.Modules.Courses.Infrastructure.Persistence;
 using AulaVirtual.Tests.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AulaVirtual.Modules.Courses.Tests;
 
@@ -69,9 +70,9 @@ public sealed class CourseContentUseCaseTests
 
     public CourseContentUseCaseTests() => repository.Courses.Add(course, "Matemáticas · Intermedio");
 
-    private CourseContentUseCases UseCases() => new(repository, TimeProvider.System);
+    private CourseContentUseCases UseCases() => new(repository, new LessonFiles(null), TimeProvider.System, NullLogger<CourseContentUseCases>.Instance);
 
-    private static LessonContent Lesson(string title, bool published = true) => new(title, null, null, published, []);
+    private static LessonInput Lesson(string title, bool published = true) => new(title, null, null, null, published, []);
 
     [Fact]
     public async Task Lessons_AreNumberedAcrossUnits_InUnitThenLessonOrder()
@@ -151,7 +152,7 @@ public sealed class CourseContentUseCaseTests
         var unit = (await useCases.AddUnitAsync(course, "Unidad 1", default)).Value!;
 
         var result = await useCases.AddLessonAsync(course, unit.Id,
-            new LessonContent("A", null, "http://video.example.com", true, []), default);
+            new LessonInput("A", null, "http://video.example.com", null, true, []), default);
 
         Assert.Equal(ContentResultStatus.Invalid, result.Status);
         Assert.Equal("El video debe ser un enlace https:// válido.", result.Detail);
@@ -168,7 +169,7 @@ public sealed class CourseContentUseCaseTests
         Assert.Equal(ContentResultStatus.Conflict, (await useCases.AddUnitAsync(course, "Una más", default)).Status);
     }
 
-    private sealed class InMemoryContent : ICourseContentRepository
+    internal sealed class InMemoryContent : ICourseContentRepository
     {
         public Dictionary<Guid, string> Courses { get; } = [];
         private readonly List<CourseUnit> units = [];
@@ -182,11 +183,16 @@ public sealed class CourseContentUseCaseTests
             var number = 0;
             var view = units.Where(u => u.CourseId == courseId).OrderBy(u => u.Position)
                 .Select(u => new UnitView(u.Id, u.Title, u.Position, lessons.Where(l => l.UnitId == u.Id).OrderBy(l => l.Position)
-                    .Select(l => new LessonView(l.Id, l.UnitId, ++number, l.Title, l.Summary, l.VideoUrl, l.IsPublished, []))
+                    .Select(l => new LessonView(l.Id, l.UnitId, ++number, l.Title, l.Summary, l.VideoUrl, l.IsPublished,
+                        l.Materials.OrderBy(m => m.Position).Select(m => new MaterialView(m.Id, m.Title, m.Url, m.FileId, m.ContentType, m.Size)).ToArray(),
+                        l.VideoFileId, l.VideoContentType))
                     .ToArray()))
                 .ToArray();
             return Task.FromResult<CourseContentView?>(new CourseContentView(courseId, title, view));
         }
+
+        public Task<CourseContentView?> GetPublishedContentAsync(Guid courseId, CancellationToken cancellationToken) =>
+            GetContentAsync(courseId, cancellationToken);
 
         public Task<IReadOnlyList<CourseUnit>> GetUnitsAsync(Guid courseId, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<CourseUnit>>(units.Where(u => u.CourseId == courseId).OrderBy(u => u.Position).ToList());

@@ -106,6 +106,11 @@ public sealed class R2FileStorage(IAmazonS3 s3, R2StorageOptions options) : IFil
 
     private async Task<Uri> SignAsync(GetPreSignedUrlRequest request, CancellationToken cancellationToken)
     {
+        // The SDK signs https:// links by default; follow the endpoint so a local HTTP server (development only,
+        // see AllowHttpEndpoint) gets links that work. R2 is always HTTPS.
+        request.Protocol = Uri.TryCreate(options.Endpoint, UriKind.Absolute, out var endpoint) && endpoint.Scheme == Uri.UriSchemeHttp
+            ? Protocol.HTTP
+            : Protocol.HTTPS;
         var url = await s3.GetPreSignedURLAsync(request);
         cancellationToken.ThrowIfCancellationRequested();
         return new Uri(url);
