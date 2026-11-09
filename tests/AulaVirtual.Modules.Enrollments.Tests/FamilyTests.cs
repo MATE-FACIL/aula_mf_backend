@@ -121,6 +121,7 @@ public sealed class FamilyTests
         Task<IReadOnlyList<OfferingSummary>> IOfferingDirectory.GetManyAsync(IReadOnlyCollection<Guid> offeringIds, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<OfferingSummary>>(Editions.Where(edition => offeringIds.Contains(edition.Id)).ToList());
 
+        public Task<SessionDetails?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<ScheduledSession>> GetSessionsAsync(IReadOnlyCollection<Guid> offeringIds, DateTimeOffset from, DateTimeOffset to, int limit, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScheduledSession>>(Sessions
                 .Where(session => offeringIds.Contains(session.OfferingId) && session.StartsAt < to && session.EndsAt > from)

@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de noviembre de 2026.
+Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -26,6 +26,37 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `List_RejectsUnknownFilters`
 - `SetActive_DeactivatesOthers_ButNeverTheActor`
 - `Summary_CountsNewUsersAndRoles`
+
+## Attendance (23)
+
+### AttendanceQueryTests
+
+- `Model_HasUniqueClassStudent_AndStudentHistoryIndexes`
+- `Recent_IsBoundedAndNewestFirst`
+- `Totals_AreOneGroupedQuery`
+
+### AttendanceRecordTests
+
+- `Change_RecordsWhoCorrected_AndIgnoresAResubmittedSameValue`
+- `StatusCodes_RoundTrip`
+- `Summary_RateCountsLateAsAttended`
+
+### AttendanceUseCaseTests
+
+- `Administrator_CanMark_OtherAccountsCannot`
+- `ConcurrentSave_IsRetriedOnce_ThenReported`
+- `Correction_UpdatesTheSameRecord`
+- `DraftOrUnknownClass_IsNotFound`
+- `DuplicatedOrEmptyRoster_IsRejected`
+- `Family_SeesOnlyTheirChildren_WithTotalsAndGroupNames`
+- `FutureClass_OpensFifteenMinutesBefore`
+- `GuardianWithoutChildren_GetsAnEmptyList_WithoutQueryingRecords`
+- `OneClick_MarksEveryoneUnmarkedPresent_WithoutTouchingExistingMarks`
+- `OnlyActiveStudents_CanBeMarked`
+- `StudentWhoLeft_KeepsTheirRecord_ButIsNoLongerEnrolled`
+- `TeacherOfTheGroup_MarksTheWholeRoster_InOneSave`
+- `TeacherPanel_ShowsOnlyTheTeachersGroups_WithAttendanceAndPractice`
+- `UnknownStatus_IsRejected`
 
 ## Auth (43)
 
@@ -127,7 +158,7 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `RolesForAPage_AreResolvedInOneQuery`
 - `UsersInRole_AndCounts_TranslateToSql`
 
-## Courses (57)
+## Courses (96)
 
 ### CourseAdministrationTests
 
@@ -155,6 +186,22 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 
 - `NonPostgresErrorsAreNotTranslated`
 - `OnlyCourseCategoryReferenceErrorsBecomeConflicts`
+
+### CourseContentQueryTests
+
+- `Model_HasTheIndexesTheQueriesUse`
+- `NextPosition_IsAMaxQuery_ServedByTheUnitIndex`
+- `PublishedContent_StartsWithTheCourse`
+
+### CourseContentUseCaseTests
+
+- `InvalidContent_IsReportedWithAReadableMessage`
+- `Lessons_AreNumberedAcrossUnits_InUnitThenLessonOrder`
+- `MovingALesson_PutsItAtTheEndOfTheOtherUnit`
+- `OtherCoursesUnitsAndLessons_AreNotFound`
+- `Reorder_MustListEveryItemOnce`
+- `UnitWithLessons_CannotBeDeleted_ButAnEmptyOneCan`
+- `UnitsArePerCourseCapped`
 
 ### CourseOfferingAuthorizationTests
 
@@ -196,6 +243,37 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `InstructorExistsWithoutUserAndKeepsItsIdentityWhenLinked`
 - `LinkUserChecksExistenceAndRejectsDuplicateInstructorIdentity`
 
+### LessonDomainTests
+
+- `Create_TrimsTexts_AndKeepsMaterialOrder`
+- `Materials_AreCapped`
+- `Update_ReplacesMaterials_AndABadMaterialChangesNothing`
+- `Video_MustBeHttps`
+
+### LessonFileRulesTests
+
+- `AMaterialIsALinkOrAFile_NeverBothOrNeither`
+- `TheVideoIsALinkOrAFile_NotBoth`
+- `TypesAndSizes_DependOnTheKind`
+
+### LessonFilesUseCaseTests
+
+- `AFileThatWasNeverUploaded_OrBreaksTheRules_IsRejected`
+- `ANewLesson_CannotCarryFiles_YetBecauseTheyBelongToTheLesson`
+- `ReplacedAndDeletedFiles_AreRemovedFromStorage`
+- `Upload_IsGrantedOnlyForAllowedFiles_OfAnExistingLesson`
+- `UploadedFiles_AreAttached_WithWhatStorageReallyHolds_AndSigned`
+- `WithoutStorage_UploadsAreUnavailable_ButLinksStillWork`
+
+### MathLevelTests
+
+- `ConcurrentProvision_IsReportedWithoutSavingHalfTheLevels`
+- `Levels_AndLessonCounts_AreTwoQueries`
+- `Provision_CreatesEveryLevelWithItsFourteenDraftSessions_InOneSave`
+- `Provision_IsSafeToRepeat_AndOnlyFillsWhatIsMissing`
+- `Provision_ReusesTheMathematicsCategory`
+- `ThereAreFourLevelsPerStage_WithTheirClassLength`
+
 ### OfferingDirectoryQueryTests
 
 - `GetMany_UsesOneQuery`
@@ -220,7 +298,13 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `SpecificPromotions_UseCurrentWindowAndExistingPriceRules`
 - `VisibilityAndPublicContract_KeepOnlyPublishedCoursesAndOfferings`
 
-## Enrollments (23)
+### TeachingDirectoryTests
+
+- `GroupSessions_CheckTheAssignmentFirst`
+- `PublishedLessons_AreInCourseOrder`
+- `TeacherGroups_StartFromTheTeachersUserId_InOneJoin`
+
+## Enrollments (26)
 
 ### EnrollmentDomainTests
 
@@ -253,12 +337,44 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `NoQueryRunsPerChild`
 - `Upcoming_IsLimitedPerChild`
 
+### StudentLessonsTests
+
+- `ActiveCourse_ShowsItsPublishedLessons`
+- `CourseWithoutActiveEnrollment_IsNotShown_AndContentIsNeverRead`
+- `DraftGroups_AreLeftOut`
+
 ### StudentScheduleTests
 
 - `ActiveOfferings_AndSessions_TranslateToSql`
 - `OnlyActiveEnrollments_ShowClasses_WithTeacherNames`
 - `RejectsInvertedOrTooLongRanges`
 - `WithoutActiveEnrollments_DoesNotQueryCourses`
+
+## Exams (27)
+
+### ExerciseTests
+
+- `MultipleChoice_IsCheckedByOptionIndex`
+- `MultipleChoice_NeedsValidOptionsAndAnswer`
+- `Numeric_AcceptsCommaOrPoint`
+- `Numeric_HonoursTheTolerance`
+
+### PracticeQueryTests
+
+- `History_IsPagedNewestFirst`
+- `Solved_IsOneGroupedQuery_WithDistinctExercises`
+- `StudentStatus_IsOneGroupedQuery`
+
+### PracticeUseCaseTests
+
+- `Answering_IsCorrectedHere_ExplainedAndCountedInProgress`
+- `Attempts_AreCappedPerExercise`
+- `CourseProgress_IsPerPublishedLessonAndOverall`
+- `RemovedExercises_AreArchived_KeepingHistory_AndLeaveTheProgress`
+- `Replace_RejectsForeignLessonsExercisesAndBadContent`
+- `TheStudentNeverReceivesTheAnswerBeforeAnswering`
+- `UnreadableAnswers_AreRejectedWithoutBeingRecorded`
+- `WithoutAnActiveEnrollment_OrOnADraftLesson_ThereIsNoPractice`
 
 ## Users (9)
 
@@ -280,11 +396,13 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 
 - `UsersModel_UsesConfirmedSchemaTableAndFilteredUniqueIndex`
 
-## SharedKernel.Storage (4)
+## SharedKernel.Storage (6)
 
 ### StorageTests
 
 - `Configuration_Rejects_Invalid_And_Selects_Separate_Buckets`
 - `Disabled_Storage_Does_Not_Register_Adapter`
+- `HttpEndpoint_IsOnlyAllowedInDevelopment`
 - `Keys_Are_Server_Shaped_And_Reject_Traversal`
+- `SignedLinks_FollowTheEndpointScheme`
 - `Signed_Grants_Are_Scoped_And_Contain_No_Secret_Key`

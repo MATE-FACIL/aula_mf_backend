@@ -1,5 +1,7 @@
+using AulaVirtual.Modules.Courses.Domain.Content;
 using AulaVirtual.Modules.Courses.Domain.Courses;
 using AulaVirtual.Modules.Courses.Domain.Instructors;
+using AulaVirtual.Modules.Courses.Domain.Levels;
 using AulaVirtual.Modules.Courses.Domain.Offerings;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +17,10 @@ public sealed class CoursesDbContext(DbContextOptions<CoursesDbContext> options)
     public DbSet<Instructor> Instructors => Set<Instructor>();
     public DbSet<CourseOfferingInstructor> CourseOfferingInstructors => Set<CourseOfferingInstructor>();
     public DbSet<SpecificPromotion> SpecificPromotions => Set<SpecificPromotion>();
+    public DbSet<CourseUnit> CourseUnits => Set<CourseUnit>();
+    public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<LessonMaterial> LessonMaterials => Set<LessonMaterial>();
+    public DbSet<MathLevelCourse> MathLevelCourses => Set<MathLevelCourse>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

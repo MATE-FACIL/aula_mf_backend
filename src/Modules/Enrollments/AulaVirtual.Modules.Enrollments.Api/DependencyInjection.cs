@@ -17,10 +17,14 @@ public static class DependencyInjection
 
         services.AddControllers().AddApplicationPart(typeof(EnrollmentsController).Assembly);
         services.TryAddSingleton(TimeProvider.System);
-        services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+        services.AddScoped<EnrollmentRepository>();
+        services.AddScoped<IEnrollmentRepository>(provider => provider.GetRequiredService<EnrollmentRepository>());
+        services.AddScoped<IEnrollmentRoster>(provider => provider.GetRequiredService<EnrollmentRepository>());
         services.AddScoped<EnrollmentUseCases>();
         services.AddScoped<StudentScheduleUseCases>();
         services.AddScoped<FamilyUseCases>();
+        services.AddScoped<StudentLessonsUseCases>();
+        services.AddScoped<IStudentCourseAccess>(provider => provider.GetRequiredService<StudentLessonsUseCases>());
 
         services.AddDbContext<EnrollmentsDbContext>(options =>
         {

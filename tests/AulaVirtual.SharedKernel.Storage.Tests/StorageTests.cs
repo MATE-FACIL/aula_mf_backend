@@ -19,6 +19,8 @@ public sealed class StorageTests
         FileObjectKeys.Validate(key);
         FileObjectKeys.Validate(FileObjectKeys.SessionRecording(Id, Id, Guid.NewGuid()));
         FileObjectKeys.Validate(FileObjectKeys.Certificate(Id, Guid.NewGuid()));
+        FileObjectKeys.Validate(FileObjectKeys.LessonFile(Id, Id, Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => FileObjectKeys.Validate($"courses/{Id:N}/lessons/{Id:N}/files/x.pdf"));
         Assert.Throws<ArgumentException>(() => FileObjectKeys.Validate("courses/../secret"));
         Assert.Throws<ArgumentException>(() => FileObjectKeys.Validate("courses/user-file.jpg"));
         Assert.Throws<ArgumentException>(() => FileObjectKeys.CourseCover(Guid.Empty, Id));
@@ -32,13 +34,39 @@ public sealed class StorageTests
         Assert.Equal("public-test", options.Bucket(FileVisibility.Public));
         Assert.Equal("private-test", options.Bucket(FileVisibility.Private));
         options.PrivateBucket = options.PublicBucket;
-        Assert.Throws<InvalidOperationException>(options.Validate);
+        Assert.Throws<InvalidOperationException>(() => options.Validate());
         options.PrivateBucket = "private-test";
         options.PublicBaseUrl = null;
         options.Validate();
         options.ValidateContent("image/png", 100, false);
         Assert.Throws<ArgumentException>(() => options.ValidateContent("video/mp4", 100, false));
         Assert.Throws<ArgumentOutOfRangeException>(() => options.ValidateContent("image/png", 2001, false));
+    }
+
+    [Fact]
+    public void HttpEndpoint_IsOnlyAllowedInDevelopment()
+    {
+        var options = Options();
+        options.Endpoint = "http://host.docker.internal:9000";
+        Assert.Throws<InvalidOperationException>(() => options.Validate(isDevelopment: true));
+        options.AllowHttpEndpoint = true;
+        options.Validate(isDevelopment: true);
+        Assert.Throws<InvalidOperationException>(() => options.Validate(isDevelopment: false));
+    }
+
+    [Fact]
+    public async Task SignedLinks_FollowTheEndpointScheme()
+    {
+        var options = Options();
+        options.Endpoint = "http://host.docker.internal:9000";
+        options.AllowHttpEndpoint = true;
+        using var client = new AmazonS3Client(new BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey),
+            new AmazonS3Config { ServiceURL = options.Endpoint, ForcePathStyle = true, AuthenticationRegion = "auto" });
+        var storage = new R2FileStorage(client, options);
+        var key = FileObjectKeys.LessonFile(Id, Id, Guid.NewGuid());
+
+        Assert.Equal("http", (await storage.GetPrivateDownloadUrlAsync(key, TimeSpan.FromMinutes(5))).Scheme);
+        Assert.Equal("http", (await storage.CreateDirectUploadAsync(new DirectUploadRequest(key, FileVisibility.Private, "image/png", 10, TimeSpan.FromMinutes(5)))).Url.Scheme);
     }
 
     [Fact]

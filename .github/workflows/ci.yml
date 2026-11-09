@@ -3,8 +3,11 @@ name: CI
 # Integración continua del backend. Se ejecuta en pull requests y es reutilizable
 # desde cd.yml para que ninguna imagen se publique sin haber pasado estas verificaciones.
 on:
+  # dev reúne lo terminado; main es lo que se publica (cd.yml). Ambas se validan.
   pull_request:
-    branches: [main]
+    branches: [main, dev]
+  push:
+    branches: [dev]
   workflow_dispatch:
   workflow_call:
 
@@ -177,7 +180,7 @@ jobs:
 
       - name: Detect model changes without a migration
         run: |
-          for entry in Users:UsersDbContext Auth:AuthDbContext Authorization:AuthorizationDbContext Courses:CoursesDbContext Enrollments:EnrollmentsDbContext; do
+          for entry in Users:UsersDbContext Auth:AuthDbContext Authorization:AuthorizationDbContext Courses:CoursesDbContext Enrollments:EnrollmentsDbContext Attendance:AttendanceDbContext Exams:ExamsDbContext; do
             module="${entry%%:*}"; context="${entry##*:}"
             echo "Checking ${context}"
             dotnet ef migrations has-pending-model-changes \

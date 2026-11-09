@@ -1,0 +1,76 @@
+# Almacenamiento local compatible con S3 (RustFS) para probar los archivos de las lecciones (SCRUM-58) sin R2.
+# Solo desarrollo:
+#   docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d --build
+#
+# La API y quien sube el archivo usan el MISMO nombre de servidor (host.docker.internal): la firma de los
+# enlaces de subida y descarga incluye el nombre, así que no puede cambiar entre ambos.
+# En Linux, agrega «127.0.0.1 host.docker.internal» a /etc/hosts para usar los enlaces desde la máquina.
+
+services:
+  s3:
+    # RustFS: servidor S3 de código abierto (MinIO ya no publica imágenes). Valida las firmas: un enlace sin
+    # firma o vencido se rechaza, como en R2. Versión fija para que el entorno no cambie solo.
+    image: rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: ${LOCAL_S3_ACCESS_KEY:-aula-local}
+      RUSTFS_SECRET_KEY: ${LOCAL_S3_SECRET_KEY:-aula-local-secret}
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+    ports:
+      - "127.0.0.1:9000:9000"
+    # En memoria (tmpfs): al apagar el contenedor no queda ningún archivo en el disco ni en un volumen.
+    # mode 1777: RustFS corre con un usuario sin privilegios y necesita escribir ahí.
+    volumes:
+      - type: tmpfs
+        target: /data
+        tmpfs:
+          mode: 01777
+    healthcheck:
+      # Responde (aunque sea 403 sin credenciales) cuando ya está escuchando.
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9000/"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # Crea los dos buckets (público y privado) con una petición firmada. Repetirlo no falla.
+  s3-init:
+    image: rustfs/rustfs:1.0.4
+    depends_on:
+      s3:
+        condition: service_healthy
+    environment:
+      S3_KEY: ${LOCAL_S3_ACCESS_KEY:-aula-local}
+      S3_SECRET: ${LOCAL_S3_SECRET_KEY:-aula-local-secret}
+    entrypoint: ["sh", "/scripts/create-buckets.sh"]
+    volumes:
+      - ./docker/create-buckets.sh:/scripts/create-buckets.sh:ro
+    restart: "no"
+
+  api:
+    depends_on:
+      s3-init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      Storage__R2__Enabled: "true"
+      # Permitido solo con ASPNETCORE_ENVIRONMENT=Development (la API se niega a arrancar en otro ambiente).
+      Storage__R2__AllowHttpEndpoint: "true"
+      Storage__R2__Endpoint: http://host.docker.internal:9000
+      # Credenciales del servidor local: no sirven fuera de esta máquina.
+      Storage__R2__AccessKeyId: ${LOCAL_S3_ACCESS_KEY:-aula-local}
+      Storage__R2__SecretAccessKey: ${LOCAL_S3_SECRET_KEY:-aula-local-secret}
+      Storage__R2__PublicBucket: aula-public
+      Storage__R2__PrivateBucket: aula-private
+      Storage__R2__AllowedContentTypes__0: image/png
+      Storage__R2__AllowedContentTypes__1: image/jpeg
+      Storage__R2__AllowedContentTypes__2: image/webp
+      Storage__R2__AllowedContentTypes__3: application/pdf
+      Storage__R2__AllowedContentTypes__4: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      Storage__R2__AllowedContentTypes__5: application/vnd.openxmlformats-officedocument.presentationml.presentation
+      Storage__R2__AllowedContentTypes__6: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      Storage__R2__AllowedContentTypes__7: video/mp4
+      Storage__R2__AllowedContentTypes__8: video/webm
+      Storage__R2__MaxBackendUploadBytes: "5242880"
+      Storage__R2__MaxDirectUploadBytes: "2147483648"
+      Storage__R2__MaxPresignedUrlSeconds: "3600"
+

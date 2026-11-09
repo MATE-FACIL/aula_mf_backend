@@ -16,11 +16,20 @@ public sealed class R2StorageOptions
     public long MaxBackendUploadBytes { get; set; }
     public long MaxDirectUploadBytes { get; set; }
     public int MaxPresignedUrlSeconds { get; set; }
+    /// <summary>
+    /// Development only: lets a local S3-compatible server (MinIO in docker-compose.storage.yml) use plain HTTP.
+    /// Refused outside Development, so staging and production always talk to R2 over HTTPS.
+    /// </summary>
+    public bool AllowHttpEndpoint { get; set; }
 
-    public void Validate()
+    public void Validate(bool isDevelopment = false)
     {
         if (!Enabled) return;
-        if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var endpoint) || endpoint.Scheme != Uri.UriSchemeHttps ||
+        if (AllowHttpEndpoint && !isDevelopment)
+            throw new InvalidOperationException("Storage:R2:AllowHttpEndpoint is only allowed in Development.");
+        var schemeAllowed = (Uri endpoint) => endpoint.Scheme == Uri.UriSchemeHttps ||
+            (AllowHttpEndpoint && endpoint.Scheme == Uri.UriSchemeHttp);
+        if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var endpoint) || !schemeAllowed(endpoint) ||
             !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment) ||
             string.IsNullOrWhiteSpace(AccessKeyId) || string.IsNullOrWhiteSpace(SecretAccessKey) ||
             string.IsNullOrWhiteSpace(PublicBucket) || string.IsNullOrWhiteSpace(PrivateBucket) ||

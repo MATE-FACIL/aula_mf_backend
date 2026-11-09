@@ -5,10 +5,12 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AulaVirtual.Modules.Exams.Application\AulaVirtual.Modules.Exams.Application.csproj" />
     <ProjectReference Include="..\AulaVirtual.Modules.Exams.Infrastructure\AulaVirtual.Modules.Exams.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Authorization\AulaVirtual.Modules.Authorization.Application\AulaVirtual.Modules.Authorization.Application.csproj" />
   </ItemGroup>
 </Project>

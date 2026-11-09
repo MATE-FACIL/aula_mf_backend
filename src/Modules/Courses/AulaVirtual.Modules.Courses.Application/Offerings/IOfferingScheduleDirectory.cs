@@ -11,6 +11,17 @@ public sealed record ScheduledSession(
     string? VirtualLink,
     IReadOnlyList<Guid> InstructorUserIds);
 
+/// <summary>One class with what attendance needs: who teaches it and whether its group is published.</summary>
+public sealed record SessionDetails(
+    Guid SessionId,
+    Guid OfferingId,
+    string OfferingName,
+    string CourseTitle,
+    DateTimeOffset StartsAt,
+    DateTimeOffset EndsAt,
+    bool IsPublished,
+    IReadOnlyList<Guid> InstructorUserIds);
+
 // Cross-module read contract for calendars (student and family). Only PUBLISHED editions are visible:
 // drafts can still change their schedule.
 public interface IOfferingScheduleDirectory
@@ -25,4 +36,7 @@ public interface IOfferingScheduleDirectory
         DateTimeOffset to,
         int limit,
         CancellationToken cancellationToken);
+
+    /// <summary>A single class, drafts included (the caller decides). Two queries: the class and its teachers.</summary>
+    Task<SessionDetails?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken);
 }

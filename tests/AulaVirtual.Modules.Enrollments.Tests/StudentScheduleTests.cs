@@ -73,6 +73,7 @@ public sealed class StudentScheduleTests
         public Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken) =>
             Task.FromResult(ActiveOfferings.GetValueOrDefault(studentUserId) ?? []);
 
+        public Task<SessionDetails?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<ScheduledSession>> GetSessionsAsync(IReadOnlyCollection<Guid> offeringIds,
             DateTimeOffset from, DateTimeOffset to, int limit, CancellationToken cancellationToken)
         {
