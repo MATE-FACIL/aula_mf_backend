@@ -1,15 +1,17 @@
 # Pruebas del backend
 
-Resultados del 4 de noviembre de 2026 sobre el commit `39eda7b` de la rama `feat/scrum-67-68-familia`.
+Resultados del 9 de noviembre de 2026 sobre el commit `fdba55c` de la rama `feat/scrum-53-55-asistencia-lecciones`.
 
 | Prueba | Dónde corre | Resultado |
 |---|---|---|
-| Unitarias y de integración (`dotnet test`) | En memoria | **166 de 166** |
+| Unitarias y de integración (`dotnet test`) | En memoria | **206 de 206** |
 | Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **24 de 24** |
 | Grupos y horarios (SCRUM-41, SCRUM-42) | API en Docker con PostgreSQL 17 | **17 de 17** |
 | Clases del alumno (SCRUM-50, SCRUM-51) | API en Docker con PostgreSQL 17 | **11 de 11** |
 | Familia (SCRUM-67, SCRUM-35) | API en Docker con PostgreSQL 17 | **6 de 6** |
-| Recorrido en navegador real | Aula conectada a la API en Docker | **46 de 46**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
+| Lecciones (SCRUM-55) | API en Docker con PostgreSQL 17 | **19 de 19** |
+| Asistencia (SCRUM-53) | API en Docker con PostgreSQL 17 | **14 de 14** |
+| Recorrido en navegador real | Aula conectada a la API en Docker | **50 de 50**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
 
 Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
 
@@ -18,15 +20,16 @@ Las pruebas contra la API también pasaron en una base nueva, preparada igual qu
 | Módulo | Pruebas |
 |---|---:|
 | Administration | 18 |
+| Attendance | 21 |
 | Auth | 43 |
 | Authorization | 12 |
-| Courses | 57 |
-| Enrollments | 23 |
+| Courses | 73 |
+| Enrollments | 26 |
 | Users | 9 |
 | SharedKernel.Storage | 4 |
-| **Total** | **166** |
+| **Total** | **206** |
 
-La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md).
+La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones y asistencia están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md).
 
 ## Pruebas contra la API real
 
@@ -92,6 +95,45 @@ Cada corrida crea sus propios datos ficticios en PostgreSQL. Esto es lo que se c
 - rango invertido → 400
 - admin sin matrículas → lista vacía (sin errores)
 - sin token → 401
+
+### Lecciones
+
+- crear unidad
+- la segunda unidad va después
+- lección con video y 2 materiales en orden
+- las lecciones se numeran por unidad y luego por orden
+- video que no es https → 400 con mensaje claro
+- más de 20 materiales → 400
+- reordenar unidades renumera las lecciones
+- un orden incompleto → 400
+- mover una lección a otra unidad la pone al final
+- borrar una unidad con lecciones → 409
+- una unidad de otro curso → 404
+- el alumno ve su curso
+- ve solo las lecciones publicadas, numeradas sin huecos
+- no ve borradores
+- la lección trae video y materiales
+- matrícula pendiente → 404
+- un curso en el que no está → 404
+- el alumno no puede administrar contenido → 403
+- sin token → 401
+
+### Asistencia
+
+- la profesora ve la lista: solo matrículas activas, sin marcar
+- un profesor de otro grupo → 403
+- el padre no puede marcar → 403
+- sin token → 401
+- la profesora marca toda la lista en una petición
+- a una matrícula pendiente → 400
+- estado desconocido → 400
+- una clase que todavía no empieza → 409
+- una clase de un grupo en borrador → 404
+- el equipo corrige la asistencia
+- 4 guardados simultáneos: sin errores y una sola fila por alumno
+- la alumna ve su asistencia con el curso
+- la familia ve solo a su hija
+- otra familia no ve nada
 
 ### Familia
 

@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de noviembre de 2026.
+Las 206 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -26,6 +26,35 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `List_RejectsUnknownFilters`
 - `SetActive_DeactivatesOthers_ButNeverTheActor`
 - `Summary_CountsNewUsersAndRoles`
+
+## Attendance (21)
+
+### AttendanceQueryTests
+
+- `Model_HasUniqueClassStudent_AndStudentHistoryIndexes`
+- `Recent_IsBoundedAndNewestFirst`
+- `Totals_AreOneGroupedQuery`
+
+### AttendanceRecordTests
+
+- `Change_RecordsWhoCorrected_AndIgnoresAResubmittedSameValue`
+- `StatusCodes_RoundTrip`
+- `Summary_RateCountsLateAsAttended`
+
+### AttendanceUseCaseTests
+
+- `Administrator_CanMark_OtherAccountsCannot`
+- `ConcurrentSave_IsRetriedOnce_ThenReported`
+- `Correction_UpdatesTheSameRecord`
+- `DraftOrUnknownClass_IsNotFound`
+- `DuplicatedOrEmptyRoster_IsRejected`
+- `Family_SeesOnlyTheirChildren_WithTotalsAndGroupNames`
+- `FutureClass_OpensFifteenMinutesBefore`
+- `GuardianWithoutChildren_GetsAnEmptyList_WithoutQueryingRecords`
+- `OnlyActiveStudents_CanBeMarked`
+- `StudentWhoLeft_KeepsTheirRecord_ButIsNoLongerEnrolled`
+- `TeacherOfTheGroup_MarksTheWholeRoster_InOneSave`
+- `UnknownStatus_IsRejected`
 
 ## Auth (43)
 
@@ -127,7 +156,7 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `RolesForAPage_AreResolvedInOneQuery`
 - `UsersInRole_AndCounts_TranslateToSql`
 
-## Courses (57)
+## Courses (73)
 
 ### CourseAdministrationTests
 
@@ -155,6 +184,22 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 
 - `NonPostgresErrorsAreNotTranslated`
 - `OnlyCourseCategoryReferenceErrorsBecomeConflicts`
+
+### CourseContentQueryTests
+
+- `Model_HasTheIndexesTheQueriesUse`
+- `NextPosition_IsAMaxQuery_ServedByTheUnitIndex`
+- `PublishedContent_StartsWithTheCourse`
+
+### CourseContentUseCaseTests
+
+- `InvalidContent_IsReportedWithAReadableMessage`
+- `Lessons_AreNumberedAcrossUnits_InUnitThenLessonOrder`
+- `MovingALesson_PutsItAtTheEndOfTheOtherUnit`
+- `OtherCoursesUnitsAndLessons_AreNotFound`
+- `Reorder_MustListEveryItemOnce`
+- `UnitWithLessons_CannotBeDeleted_ButAnEmptyOneCan`
+- `UnitsArePerCourseCapped`
 
 ### CourseOfferingAuthorizationTests
 
@@ -196,6 +241,13 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `InstructorExistsWithoutUserAndKeepsItsIdentityWhenLinked`
 - `LinkUserChecksExistenceAndRejectsDuplicateInstructorIdentity`
 
+### LessonDomainTests
+
+- `Create_TrimsTexts_AndKeepsMaterialOrder`
+- `Materials_AreCapped`
+- `Update_ReplacesMaterials_AndABadMaterialChangesNothing`
+- `Video_MustBeHttps`
+
 ### OfferingDirectoryQueryTests
 
 - `GetMany_UsesOneQuery`
@@ -220,7 +272,7 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `SpecificPromotions_UseCurrentWindowAndExistingPriceRules`
 - `VisibilityAndPublicContract_KeepOnlyPublishedCoursesAndOfferings`
 
-## Enrollments (23)
+## Enrollments (26)
 
 ### EnrollmentDomainTests
 
@@ -252,6 +304,12 @@ Las 166 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 4 de nov
 - `LiveSeats_TranslateToSql`
 - `NoQueryRunsPerChild`
 - `Upcoming_IsLimitedPerChild`
+
+### StudentLessonsTests
+
+- `ActiveCourse_ShowsItsPublishedLessons`
+- `CourseWithoutActiveEnrollment_IsNotShown_AndContentIsNeverRead`
+- `DraftGroups_AreLeftOut`
 
 ### StudentScheduleTests
 
