@@ -8,8 +8,10 @@ public static class Permissions
     public const string InstructorsManage = "instructors.manage";
     public const string UsersManage = "users.manage";
     public const string EnrollmentsManage = "enrollments.manage";
+    // Take attendance in any class. A teacher can always take it in their own groups without this permission.
+    public const string AttendanceManage = "attendance.manage";
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
-    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage, EnrollmentsManage };
+    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage, EnrollmentsManage, AttendanceManage };
 }
 
 public static class Roles

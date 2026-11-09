@@ -15,3 +15,4 @@ apply Auth AuthDbContext
 apply Authorization AuthorizationDbContext
 apply Courses CoursesDbContext
 apply Enrollments EnrollmentsDbContext
+apply Attendance AttendanceDbContext

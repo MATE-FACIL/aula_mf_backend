@@ -5,5 +5,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AulaVirtual.Modules.Attendance.Domain\AulaVirtual.Modules.Attendance.Domain.csproj" />
+    <ProjectReference Include="..\..\Authorization\AulaVirtual.Modules.Authorization.Application\AulaVirtual.Modules.Authorization.Application.csproj" />
+    <ProjectReference Include="..\..\Courses\AulaVirtual.Modules.Courses.Application\AulaVirtual.Modules.Courses.Application.csproj" />
+    <ProjectReference Include="..\..\Enrollments\AulaVirtual.Modules.Enrollments.Application\AulaVirtual.Modules.Enrollments.Application.csproj" />
+    <ProjectReference Include="..\..\Users\AulaVirtual.Modules.Users.Application\AulaVirtual.Modules.Users.Application.csproj" />
   </ItemGroup>
 </Project>

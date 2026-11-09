@@ -18,6 +18,13 @@ public enum SeatReservation
     Full
 }
 
+// Cross-module read contract (attendance): who is actively studying in a group right now.
+public interface IEnrollmentRoster
+{
+    /// <summary>Students with an ACTIVE enrollment in the edition; one indexed query.</summary>
+    Task<IReadOnlyList<Guid>> GetActiveStudentIdsAsync(Guid courseOfferingId, CancellationToken cancellationToken);
+}
+
 public interface IEnrollmentRepository
 {
     /// <summary>Tracked, ready to change status.</summary>

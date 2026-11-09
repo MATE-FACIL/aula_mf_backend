@@ -1,3 +1,4 @@
+using AulaVirtual.Modules.Courses.Application.Content;
 using AulaVirtual.Modules.Courses.Application.Offerings;
 using AulaVirtual.Modules.Courses.Application.Instructors;
 using AulaVirtual.Modules.Courses.Application.Courses;
@@ -22,6 +23,11 @@ public static class DependencyInjection
         services.AddScoped<IOfferingDirectory, OfferingDirectory>();
         services.AddScoped<IOfferingScheduleDirectory, OfferingScheduleDirectory>();
         services.AddScoped<ICourseRepository, CourseRepository>();
+        // Lessons (SCRUM-55): one repository serves the administration and the read contract for students.
+        services.AddScoped<CourseContentRepository>();
+        services.AddScoped<ICourseContentRepository>(provider => provider.GetRequiredService<CourseContentRepository>());
+        services.AddScoped<ICourseContentDirectory>(provider => provider.GetRequiredService<CourseContentRepository>());
+        services.AddScoped<CourseContentUseCases>();
         services.AddScoped<IPublicCourseCatalogRepository, PublicCourseCatalogRepository>();
         services.AddScoped<PublicCourseCatalogUseCases>();
         services.AddScoped<CourseUseCases>();

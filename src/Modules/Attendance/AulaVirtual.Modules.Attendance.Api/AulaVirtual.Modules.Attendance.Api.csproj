@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
   </ItemGroup>
 
   <ItemGroup>

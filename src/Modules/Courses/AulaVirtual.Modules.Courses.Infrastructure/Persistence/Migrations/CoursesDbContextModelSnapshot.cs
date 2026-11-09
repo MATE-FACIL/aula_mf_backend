@@ -23,6 +23,142 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.CourseUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_course_units");
+
+                    b.HasIndex("CourseId", "Position")
+                        .HasDatabaseName("ix_course_units_course_position");
+
+                    b.ToTable("course_units", "courses", t =>
+                        {
+                            t.HasCheckConstraint("ck_course_units_position", "position >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.Lesson", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_published");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<Guid>("UnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unit_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VideoUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("video_url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lessons");
+
+                    b.HasIndex("CourseId", "IsPublished")
+                        .HasDatabaseName("ix_lessons_course_published");
+
+                    b.HasIndex("UnitId", "Position")
+                        .HasDatabaseName("ix_lessons_unit_position");
+
+                    b.ToTable("lessons", "courses", t =>
+                        {
+                            t.HasCheckConstraint("ck_lessons_position", "position >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.LessonMaterial", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lesson_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lesson_materials");
+
+                    b.HasIndex("LessonId", "Position")
+                        .HasDatabaseName("ix_lesson_materials_lesson_position");
+
+                    b.ToTable("lesson_materials", "courses");
+                });
+
             modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Courses.Course", b =>
                 {
                     b.Property<Guid>("Id")
@@ -323,6 +459,43 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.CourseUnit", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Courses.Domain.Courses.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_course_units_courses_course_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.Lesson", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Courses.Domain.Courses.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lessons_courses_course_id");
+
+                    b.HasOne("AulaVirtual.Modules.Courses.Domain.Content.CourseUnit", null)
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("fk_lessons_course_units_unit_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.LessonMaterial", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Courses.Domain.Content.Lesson", null)
+                        .WithMany("Materials")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lesson_materials_lessons_lesson_id");
+                });
+
             modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Courses.Course", b =>
                 {
                     b.HasOne("AulaVirtual.Modules.Courses.Domain.Courses.CourseCategory", null)
@@ -377,6 +550,11 @@ namespace AulaVirtual.Modules.Courses.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired()
                         .HasConstraintName("fk_course_offering_promotions_offering_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Content.Lesson", b =>
+                {
+                    b.Navigation("Materials");
                 });
 
             modelBuilder.Entity("AulaVirtual.Modules.Courses.Domain.Offerings.CourseOffering", b =>

@@ -60,4 +60,35 @@ public sealed class OfferingScheduleDirectory(CoursesDbContext db) : IOfferingSc
                 teachers.GetValueOrDefault(row.OfferingId) ?? []))
             .ToArray();
     }
+
+    public async Task<SessionDetails?> GetSessionAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        var row = await (
+                from session in db.OfferingSessions.AsNoTracking()
+                join offering in db.CourseOfferings.AsNoTracking() on session.CourseOfferingId equals offering.Id
+                join course in db.Courses.AsNoTracking() on offering.CourseId equals course.Id
+                where session.Id == sessionId
+                select new
+                {
+                    session.Id,
+                    OfferingId = offering.Id,
+                    OfferingName = offering.Name,
+                    CourseTitle = course.Title,
+                    session.StartsAt,
+                    session.EndsAt,
+                    IsPublished = offering.Status == CourseOfferingStatus.Published
+                })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (row is null) return null;
+
+        var teachers = await (
+                from assignment in db.CourseOfferingInstructors.AsNoTracking()
+                join instructor in db.Instructors.AsNoTracking() on assignment.InstructorId equals instructor.Id
+                where assignment.CourseOfferingId == row.OfferingId && instructor.UserId != null
+                select instructor.UserId!.Value)
+            .ToListAsync(cancellationToken);
+
+        return new SessionDetails(row.Id, row.OfferingId, row.OfferingName, row.CourseTitle, row.StartsAt, row.EndsAt,
+            row.IsPublished, teachers);
+    }
 }
