@@ -98,6 +98,36 @@ public sealed class Enrollment
         UpdatedAt = now;
     }
 
+    /// <summary>
+    /// Moves the student to another group (SCRUM-45): this seat is withdrawn and a new one is created in the
+    /// destination with the same status. A confirmed payment stays confirmed, with who confirmed it and when. The
+    /// caller records the change with <see cref="EnrollmentTransfer.Record"/>.
+    /// </summary>
+    public Enrollment TransferTo(Guid newEnrollmentId, Guid destinationOfferingId, Guid actorUserId, DateTimeOffset now)
+    {
+        RequireId(newEnrollmentId, nameof(newEnrollmentId));
+        RequireId(destinationOfferingId, nameof(destinationOfferingId));
+        RequireId(actorUserId, nameof(actorUserId));
+        if (!HoldsSeat)
+        {
+            throw new InvalidOperationException("Only a pending or active enrollment can be moved to another group.");
+        }
+
+        if (destinationOfferingId == CourseOfferingId)
+        {
+            throw new ArgumentException("The destination group is the current one.", nameof(destinationOfferingId));
+        }
+
+        var moved = new Enrollment(newEnrollmentId, StudentUserId, destinationOfferingId, PaymentNote, actorUserId, now)
+        {
+            Status = Status,
+            ActivatedByUserId = ActivatedByUserId,
+            ActivatedAt = ActivatedAt
+        };
+        Withdraw(actorUserId, now);
+        return moved;
+    }
+
     private static string? CleanNote(string? note)
     {
         var trimmed = note?.Trim();

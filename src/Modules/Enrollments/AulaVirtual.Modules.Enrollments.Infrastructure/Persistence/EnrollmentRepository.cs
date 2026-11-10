@@ -6,7 +6,7 @@ using Npgsql;
 
 namespace AulaVirtual.Modules.Enrollments.Infrastructure.Persistence;
 
-public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentRepository, IEnrollmentRoster
+public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentRepository, IEnrollmentRoster, IEnrollmentTransferRepository
 {
     // Served by ix_enrollments_offering_status.
     public async Task<IReadOnlyList<Guid>> GetActiveStudentIdsAsync(Guid courseOfferingId,
@@ -98,6 +98,76 @@ public sealed class EnrollmentRepository(EnrollmentsDbContext db) : IEnrollmentR
 
         await transaction.CommitAsync(cancellationToken);
         return SeatReservation.Added;
+    }
+
+    public async Task<TransferAttempt> TransferAsync(Guid enrollmentId, Guid destinationOfferingId, int destinationCapacity,
+        Guid actorUserId, string? reason, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var studentId = await db.Enrollments.AsNoTracking()
+            .Where(item => item.Id == enrollmentId)
+            .Select(item => (Guid?)item.StudentUserId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (studentId is not { } student) return new TransferAttempt(TransferOutcome.SourceNotFound);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+
+        // Two locks, always in this order (student, then group), so two moves can never wait for each other:
+        //  - the student's: two moves of the same student run one after the other, and the second finds the seat
+        //    already withdrawn instead of leaving the student with two seats;
+        //  - the destination's: the same lock an enrollment takes, so «count seats + insert» cannot be raced.
+        // Both are released automatically at commit or rollback.
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({student.ToString()}, 1))", cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({destinationOfferingId.ToString()}, 0))", cancellationToken);
+
+        // Read again now that the locks are held: the first read could be stale.
+        var source = await db.Enrollments.SingleAsync(item => item.Id == enrollmentId, cancellationToken);
+        if (!source.HoldsSeat) return new TransferAttempt(TransferOutcome.SourceWithdrawn);
+        if (source.CourseOfferingId == destinationOfferingId) return new TransferAttempt(TransferOutcome.SameGroup);
+
+        var live = db.Enrollments.Where(item =>
+            item.CourseOfferingId == destinationOfferingId && item.Status != EnrollmentStatus.Withdrawn);
+        if (await live.AnyAsync(item => item.StudentUserId == source.StudentUserId, cancellationToken))
+            return new TransferAttempt(TransferOutcome.AlreadyEnrolled);
+        if (await live.CountAsync(cancellationToken) >= destinationCapacity)
+            return new TransferAttempt(TransferOutcome.Full);
+
+        var moved = source.TransferTo(Guid.NewGuid(), destinationOfferingId, actorUserId, now);
+        var record = EnrollmentTransfer.Record(Guid.NewGuid(), source, moved, reason, actorUserId, now);
+        db.Enrollments.Add(moved);
+        db.Transfers.Add(record);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Backstop for the partial unique index: nothing of this move was saved.
+            db.ChangeTracker.Clear();
+            return new TransferAttempt(TransferOutcome.AlreadyEnrolled);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return new TransferAttempt(TransferOutcome.Transferred, moved, record);
+    }
+
+    public async Task<(IReadOnlyList<EnrollmentTransfer> Items, int Total)> SearchTransfersAsync(Guid? studentUserId,
+        Guid? courseOfferingId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        var items = db.Transfers.AsNoTracking();
+        if (studentUserId is { } studentId) items = items.Where(item => item.StudentUserId == studentId);
+        if (courseOfferingId is { } offeringId)
+            items = items.Where(item => item.FromOfferingId == offeringId || item.ToOfferingId == offeringId);
+
+        var total = await items.CountAsync(cancellationToken);
+        var skip = (page - 1) * pageSize;
+        if (total == 0 || skip >= total) return ([], total);
+
+        var found = await items.OrderByDescending(item => item.TransferredAt).ThenBy(item => item.Id)
+            .Skip(skip).Take(pageSize).ToListAsync(cancellationToken);
+        return (found, total);
     }
 
     public async Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId,

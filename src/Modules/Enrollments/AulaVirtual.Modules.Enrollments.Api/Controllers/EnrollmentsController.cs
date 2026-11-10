@@ -11,11 +11,16 @@ public sealed record EnrollRequest(Guid StudentUserId, Guid CourseOfferingId, st
 
 public sealed record ActivateEnrollmentRequest(string? PaymentNote);
 
+public sealed record TransferEnrollmentRequest(Guid CourseOfferingId, string? Reason);
+
 [ApiController]
 [ApiVersion(1)]
 [Route("api/v{version:apiVersion}/enrollments")]
 [Authorize(Policy = Permissions.EnrollmentsManage)]
-public sealed class EnrollmentsController(EnrollmentUseCases useCases) : ControllerBase
+public sealed class EnrollmentsController(
+    EnrollmentUseCases useCases,
+    EnrollmentTransferUseCases transferUseCases,
+    PlacementUseCases placementUseCases) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -33,6 +38,24 @@ public sealed class EnrollmentsController(EnrollmentUseCases useCases) : Control
     public async Task<IActionResult> Offerings(CancellationToken cancellationToken) =>
         Ok(await useCases.ListOfferingSeatsAsync(cancellationToken));
 
+    /// <summary>
+    /// Where to place a student (SCRUM-45): the published Mathematics groups with their free seats, those of the level the
+    /// teacher confirmed in the diagnostic first, and the student's current seats.
+    /// </summary>
+    [HttpGet("placement")]
+    public async Task<IActionResult> Placement([FromQuery] Guid studentUserId, CancellationToken cancellationToken) =>
+        ToActionResult(await placementUseCases.GetAsync(studentUserId, cancellationToken), Ok);
+
+    /// <summary>The changes of group, newest first. <c>courseOfferingId</c> matches the group a student left or joined.</summary>
+    [HttpGet("transfers")]
+    public async Task<IActionResult> Transfers(
+        [FromQuery] Guid? studentUserId,
+        [FromQuery] Guid? courseOfferingId,
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = EnrollmentListQuery.DefaultPageSize) =>
+        Ok(await transferUseCases.ListAsync(new TransferListQuery(studentUserId, courseOfferingId, page, pageSize), cancellationToken));
+
     [HttpPost]
     public async Task<IActionResult> Enroll(EnrollRequest request, CancellationToken cancellationToken)
     {
@@ -47,6 +70,19 @@ public sealed class EnrollmentsController(EnrollmentUseCases useCases) : Control
     {
         if (!TryGetActor(out var actor)) return Unauthorized();
         return ToActionResult(await useCases.ActivateAsync(actor, enrollmentId, request?.PaymentNote,
+            cancellationToken), Ok);
+    }
+
+    /// <summary>
+    /// Moves the student to another group: the destination needs a free seat; the old seat is withdrawn, the new one keeps
+    /// the status and the change is recorded with who, when and why.
+    /// </summary>
+    [HttpPost("{enrollmentId:guid}/transfer")]
+    public async Task<IActionResult> Transfer(Guid enrollmentId, TransferEnrollmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetActor(out var actor)) return Unauthorized();
+        return ToActionResult(await transferUseCases.TransferAsync(actor, enrollmentId, request.CourseOfferingId, request.Reason,
             cancellationToken), Ok);
     }
 
