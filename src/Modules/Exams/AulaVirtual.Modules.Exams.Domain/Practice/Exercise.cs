@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace AulaVirtual.Modules.Exams.Domain.Practice;
 
 public enum ExerciseKind
@@ -44,13 +42,13 @@ public sealed record ExerciseContent(
 // deleted, so students keep their attempt history (SCRUM-60).
 public sealed class Exercise
 {
-    public const int MaxPromptLength = 1000;
-    public const int MaxExplanationLength = 2000;
-    public const int MaxOptionLength = 200;
-    public const int MinOptions = 2;
-    public const int MaxOptions = 6;
-    public const int MaxAnswerLength = 50;
-    public const decimal MaxTolerance = 1_000_000m;
+    public const int MaxPromptLength = ExerciseRules.MaxPromptLength;
+    public const int MaxExplanationLength = ExerciseRules.MaxExplanationLength;
+    public const int MaxOptionLength = ExerciseRules.MaxOptionLength;
+    public const int MinOptions = ExerciseRules.MinOptions;
+    public const int MaxOptions = ExerciseRules.MaxOptions;
+    public const int MaxAnswerLength = ExerciseRules.MaxAnswerLength;
+    public const decimal MaxTolerance = ExerciseRules.MaxTolerance;
 
     private Exercise()
     {
@@ -110,67 +108,18 @@ public sealed class Exercise
     /// Corrects an answer: the option index for multiple choice, a number (comma or point as decimal separator)
     /// for numeric exercises. Null when the answer cannot be read at all.
     /// </summary>
-    public bool? Check(string? answer)
-    {
-        var text = answer?.Trim();
-        if (string.IsNullOrEmpty(text) || text.Length > MaxAnswerLength) return null;
-        if (Kind == ExerciseKind.MultipleChoice)
-            return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var option) && option < Options.Length
-                ? option == CorrectOption
-                : null;
-        return decimal.TryParse(text.Replace(',', '.'), NumberStyles.Number & ~NumberStyles.AllowThousands,
-            CultureInfo.InvariantCulture, out var number)
-            ? Math.Abs(number - CorrectNumber!.Value) <= Tolerance
-            : null;
-    }
+    public bool? Check(string? answer) => ExerciseRules.Check(Kind, Options, CorrectOption, CorrectNumber, Tolerance, answer);
 
     private void Apply(ExerciseContent content)
     {
-        ArgumentNullException.ThrowIfNull(content);
-        if (!Enum.IsDefined(content.Kind)) throw new ArgumentException("Tipo de ejercicio desconocido.", nameof(content));
-        var prompt = Text(content.Prompt, MaxPromptLength, "El enunciado", required: true)!;
-        var explanation = Text(content.Explanation, MaxExplanationLength, "La explicación", required: false);
-
-        string[] options = [];
-        int? correctOption = null;
-        decimal? correctNumber = null;
-        decimal tolerance = 0;
-        if (content.Kind == ExerciseKind.MultipleChoice)
-        {
-            options = (content.Options ?? []).Select(option => Text(option, MaxOptionLength, "Cada opción", required: true)!).ToArray();
-            if (options.Length is < MinOptions or > MaxOptions)
-                throw new ArgumentException($"Un ejercicio de opción múltiple tiene entre {MinOptions} y {MaxOptions} opciones.", nameof(content));
-            if (options.Distinct(StringComparer.CurrentCultureIgnoreCase).Count() != options.Length)
-                throw new ArgumentException("Las opciones no se pueden repetir.", nameof(content));
-            if (content.CorrectOption is not { } correct || correct < 0 || correct >= options.Length)
-                throw new ArgumentException("Indica cuál de las opciones es la correcta.", nameof(content));
-            correctOption = correct;
-        }
-        else
-        {
-            correctNumber = content.CorrectNumber ?? throw new ArgumentException("Indica el número correcto.", nameof(content));
-            tolerance = content.Tolerance ?? 0;
-            if (tolerance is < 0 or > MaxTolerance)
-                throw new ArgumentException("La tolerancia debe ser cero o un número positivo.", nameof(content));
-        }
-
-        Kind = content.Kind;
-        Prompt = prompt;
-        Explanation = explanation;
-        Options = options;
-        CorrectOption = correctOption;
-        CorrectNumber = correctNumber;
-        Tolerance = tolerance;
-    }
-
-    private static string? Text(string? value, int maxLength, string label, bool required)
-    {
-        var trimmed = value?.Trim();
-        if (string.IsNullOrEmpty(trimmed))
-            return required ? throw new ArgumentException($"{label} es obligatorio.", nameof(value)) : null;
-        if (trimmed.Length > maxLength)
-            throw new ArgumentException($"{label} admite como máximo {maxLength} caracteres.", nameof(value));
-        return trimmed;
+        var rules = ExerciseRules.Normalize(content);
+        Kind = rules.Kind;
+        Prompt = rules.Prompt;
+        Explanation = rules.Explanation;
+        Options = rules.Options;
+        CorrectOption = rules.CorrectOption;
+        CorrectNumber = rules.CorrectNumber;
+        Tolerance = rules.Tolerance;
     }
 
     private static int RequirePosition(int position) =>

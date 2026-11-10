@@ -69,7 +69,8 @@ public sealed class AuthorizationUseCases(IAuthorizationRepository repository, I
 public sealed class CatalogProvisioner(IAuthorizationRepository repository)
 {
     // v2: guardian role and users.manage permission. v3: enrollments.manage. v4: attendance.manage.
-    public const int CurrentVersion = 4;
+    // v5: diagnostics.review, also granted to teachers.
+    public const int CurrentVersion = 5;
     public const string CatalogCode = "aulavirtual";
 
     public async Task ProvisionAsync(CancellationToken cancellationToken)
@@ -80,8 +81,9 @@ public sealed class CatalogProvisioner(IAuthorizationRepository repository)
 
         var administrator = await EnsureRoleAsync(Roles.Administrator, "Administrator", cancellationToken);
         await EnsureRoleAsync(Roles.Student, "Student", cancellationToken);
-        await EnsureRoleAsync(Roles.Instructor, "Instructor", cancellationToken);
+        var instructor = await EnsureRoleAsync(Roles.Instructor, "Instructor", cancellationToken);
         await EnsureRoleAsync(Roles.Guardian, "Guardian", cancellationToken);
+        Permission? review = null;
         foreach (var (code, name) in new[]
         {
             (Permissions.CoursesManage, "Manage courses"),
@@ -89,12 +91,22 @@ public sealed class CatalogProvisioner(IAuthorizationRepository repository)
             (Permissions.InstructorsManage, "Manage instructors"),
             (Permissions.UsersManage, "Manage users and families"),
             (Permissions.EnrollmentsManage, "Manage enrollments"),
-            (Permissions.AttendanceManage, "Take attendance in any class")
+            (Permissions.AttendanceManage, "Take attendance in any class"),
+            (Permissions.DiagnosticsReview, "Review entry diagnostics and confirm levels")
         })
         {
             var permission = await EnsurePermissionAsync(code, name, cancellationToken);
+            if (code == Permissions.DiagnosticsReview) review = permission;
             if (!await repository.RoleHasPermissionAsync(administrator.Id, permission.Id, cancellationToken))
                 repository.Add(RolePermission.Create(administrator.Id, permission.Id));
+        }
+
+        // Teachers confirm the level of the diagnostic (SCRUM-48). Granted once, when the catalog reaches v5: if an
+        // administrator later revokes it from teachers, provisioning again does not give it back.
+        if (existingVersion is null || existingVersion.Version < 5)
+        {
+            if (review is not null && !await repository.RoleHasPermissionAsync(instructor.Id, review.Id, cancellationToken))
+                repository.Add(RolePermission.Create(instructor.Id, review.Id));
         }
 
         if (existingVersion is null) repository.Add(CatalogVersion.Create(CatalogCode, CurrentVersion));
