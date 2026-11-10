@@ -1,6 +1,6 @@
 # Lista de pruebas unitarias y de integración
 
-Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de noviembre de 2026.
+Las 296 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 10 de noviembre de 2026.
 
 ## Administration (18)
 
@@ -146,7 +146,7 @@ Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `DomainAndEfModelRejectDuplicateKeysAndDoNotRelateToUsersEf`
 - `MultipleRolesAggregateAndRevocationsAffectNextEvaluation`
 - `PolicyReadsUserIdAndCurrentRepositoryOnEveryEvaluation`
-- `ProvisioningIsIdempotentAndAssignsOnlyAdministratorCapabilities`
+- `ProvisioningIsIdempotent_AdministratorsGetEverything_TeachersOnlyDiagnosticsReview`
 
 ### BootstrapConcurrencyIntegrationTests
 
@@ -304,7 +304,7 @@ Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `PublishedLessons_AreInCourseOrder`
 - `TeacherGroups_StartFromTheTeachersUserId_InOneJoin`
 
-## Enrollments (26)
+## Enrollments (42)
 
 ### EnrollmentDomainTests
 
@@ -317,6 +317,18 @@ Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 
 - `Search_FiltersAndPagesInSql`
 - `SeatCount_IgnoresWithdrawn_AndGroupsByEdition`
+
+### EnrollmentTransferDomainTests
+
+- `AConfirmedPayment_StaysConfirmedWithWhoConfirmedItAndWhen`
+- `AWithdrawnSeatCannotBeMoved_NorToTheSameGroup`
+- `MovingAPendingSeat_WithdrawsTheOldOne_AndStartsAPendingOneInTheDestination`
+- `TheRecord_NeedsTheSameStudentAndTwoDifferentGroups`
+- `TheRecord_TiesBothSeats_AndTrimsTheReason`
+
+### EnrollmentTransferQueryTests
+
+- `Search_FiltersByStudentAndEitherSideOfTheMove_AndPagesInSql`
 
 ### EnrollmentUseCaseTests
 
@@ -350,7 +362,52 @@ Las 260 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 9 de nov
 - `RejectsInvertedOrTooLongRanges`
 - `WithoutActiveEnrollments_DoesNotQueryCourses`
 
-## Exams (27)
+### TransferAndPlacementUseCaseTests
+
+- `Placement_LeavesOutDraftsAndCoursesThatAreNotLevels_AndFlagsTheSeatsTheStudentHolds`
+- `Placement_OnlyForExistingStudents`
+- `Placement_OnlyMatchesTheStageOfTheDiagnostic`
+- `Placement_PutsFirstTheGroupsOfTheConfirmedLevel_WithTheirFreeSeats`
+- `Placement_WithoutAConfirmedLevel_RecommendsNothing_ButShowsTheSuggestedOne`
+- `TheChangesAreListedNewestFirst_WithNames_AndFilteredByStudent`
+- `Transfer_MovesTheSeat_AndRecordsWhoWhenAndWhy`
+- `Transfer_RejectsDraftsUnknownGroupsSameGroupAndAlreadyEnrolled`
+- `Transfer_RejectsUnknownOrWithdrawnSeats_AndLongReasons`
+- `Transfer_RespectsTheCapacityOfTheDestination`
+
+## Exams (47)
+
+### DiagnosticDomainTests
+
+- `AQuestionNeedsAKnownLevelAndATopic`
+- `ASkippedQuestionIsNeverCorrect`
+- `OnlyACompletedDiagnosticCanBeConfirmed`
+
+### DiagnosticQueryTests
+
+- `AnswersPerAttempt_IsOneGroupedQuery`
+- `PendingList_IsPagedAndFiltered`
+- `QuestionsPerStage_IsOneGroupedQuery`
+
+### DiagnosticScoringTests
+
+- `FailingTheFirstLevelSuggestsIt`
+- `MasteringEveryLevelSuggestsTheHighestMeasured`
+- `SixtyPercentMastersALevel`
+- `SuggestsTheFirstLevelNotMasteredYet`
+- `TopicsKeepTheirOrderAndMergeIgnoringCase`
+
+### DiagnosticUseCaseTests
+
+- `Answers_RejectUnreadableAnswersAndOtherStudents`
+- `Bank_ReportsWhichQuestionIsWrong`
+- `ConfirmingNeedsAFinishedDiagnosticAndAKnownLevel`
+- `EditingTheBankDoesNotChangeAStartedDiagnostic`
+- `OnlyStudentsCanStart_AndOnlyWithQuestions`
+- `StartingAgainReturnsTheSameDiagnostic`
+- `TheLastAnswerFinishesAndSuggestsALevel`
+- `TheStudentNeverReceivesTheAnswers`
+- `TheTeacherSeesEachAnswerAndConfirmsTheLevel`
 
 ### ExerciseTests
 

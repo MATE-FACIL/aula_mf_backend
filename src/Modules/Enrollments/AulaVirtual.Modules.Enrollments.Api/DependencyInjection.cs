@@ -20,7 +20,10 @@ public static class DependencyInjection
         services.AddScoped<EnrollmentRepository>();
         services.AddScoped<IEnrollmentRepository>(provider => provider.GetRequiredService<EnrollmentRepository>());
         services.AddScoped<IEnrollmentRoster>(provider => provider.GetRequiredService<EnrollmentRepository>());
+        services.AddScoped<IEnrollmentTransferRepository>(provider => provider.GetRequiredService<EnrollmentRepository>());
         services.AddScoped<EnrollmentUseCases>();
+        services.AddScoped<EnrollmentTransferUseCases>();
+        services.AddScoped<PlacementUseCases>();
         services.AddScoped<StudentScheduleUseCases>();
         services.AddScoped<FamilyUseCases>();
         services.AddScoped<StudentLessonsUseCases>();

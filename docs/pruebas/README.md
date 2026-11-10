@@ -1,10 +1,10 @@
 # Pruebas del backend
 
-Resultados del 9 de noviembre de 2026 sobre el último commit de la rama `feat/scrum-59-60-69-practica-profesor`.
+Resultados del 10 de noviembre de 2026 sobre la rama `feature/scrum-45-asignacion-grupo`, con la asignación a grupo (SCRUM-45) y el diagnóstico de entrada (SCRUM-47, SCRUM-48).
 
 | Prueba | Dónde corre | Resultado |
 |---|---|---|
-| Unitarias y de integración (`dotnet test`) | En memoria | **260 de 260** |
+| Unitarias y de integración (`dotnet test`) | En memoria | **296 de 296** |
 | Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **24 de 24** |
 | Grupos y horarios (SCRUM-41, SCRUM-42) | API en Docker con PostgreSQL 17 | **17 de 17** |
 | Clases del alumno (SCRUM-50, SCRUM-51) | API en Docker con PostgreSQL 17 | **11 de 11** |
@@ -15,7 +15,9 @@ Resultados del 9 de noviembre de 2026 sobre el último commit de la rama `feat/s
 | Archivos de las lecciones (SCRUM-58) | API en Docker con almacenamiento S3 local (RustFS) | **16 de 16** |
 | Práctica (SCRUM-59, SCRUM-60) | API en Docker con PostgreSQL 17 | **16 de 16** |
 | Panel del profesor (SCRUM-69) | API en Docker con PostgreSQL 17 | **8 de 8** |
-| Recorrido en navegador real | Aula conectada a la API en Docker | **52 de 52**, ver [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
+| Diagnóstico de entrada (SCRUM-47, SCRUM-48) | API en Docker con PostgreSQL 17 | **22 de 22** |
+| Asignación a grupo y cambio de grupo (SCRUM-45), con pedidos simultáneos | API en Docker con PostgreSQL 17 | **32 de 32** |
+| Recorridos en navegador real | Aula conectada a la API en Docker | Ver las [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
 
 Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Esa base no tiene almacenamiento, así que la suite de archivos se omite allí; la de archivos corre con `docker-compose.storage.yml`. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
 
@@ -28,13 +30,13 @@ Las pruebas contra la API también pasaron en una base nueva, preparada igual qu
 | Auth | 43 |
 | Authorization | 12 |
 | Courses | 96 |
-| Enrollments | 26 |
-| Exams | 27 |
+| Enrollments | 42 |
+| Exams | 47 |
 | Users | 9 |
 | SharedKernel.Storage | 6 |
-| **Total** | **260** |
+| **Total** | **296** |
 
-La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones, archivos, niveles, práctica, asistencia y panel del profesor están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md).
+La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones, archivos, niveles, práctica, asistencia y panel del profesor están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md); las del diagnóstico, en [DIAGNOSTICO.md](../DIAGNOSTICO.md); las de la asignación a grupo, en [ASIGNACION-DE-GRUPO.md](../ASIGNACION-DE-GRUPO.md).
 
 ## Pruebas contra la API real
 
@@ -211,6 +213,66 @@ Al terminar, la suite borra todo lo que subió (pase o falle) y comprueba que el
 - el otro padre ve solo a su hijo
 - cuenta sin hijos → lista vacía
 - sin token → 401
+
+
+### Diagnóstico de entrada
+
+- el equipo carga el banco con nivel, tema y respuesta
+- un nivel desconocido → 400 con el número de pregunta
+- una etapa desconocida → 404
+- resumen: primaria disponible y sin empezar
+- el alumno empieza y ve las preguntas sin la respuesta ni la explicación
+- empezar otra vez devuelve el mismo diagnóstico
+- un profesor no puede rendirlo → 404
+- quitar preguntas del banco no cambia el diagnóstico empezado
+- una respuesta ilegible → 400 y no se guarda
+- sin decir si está bien o mal: solo el avance
+- cada pregunta se responde una vez → 409
+- la última respuesta («No lo sé») termina y sugiere Básico
+- resultado por tema: Conteo 100 %, Fracciones 0 %
+- terminado: empezar otra vez devuelve el resultado
+- el profesor ve el diagnóstico pendiente con el nombre del alumno
+- detalle: cada respuesta, la correcta y la explicación
+- el profesor confirma otro nivel
+- un nivel desconocido → 400
+- el alumno ve el nivel confirmado
+- un alumno no puede ver la revisión → 403
+- un estado desconocido → 400
+- el banco de preguntas queda como estaba
+
+### Asignación a grupo y cambio de grupo
+
+- sin diagnóstico: no se recomienda ningún grupo y se ven sus plazas
+- cada grupo trae su nivel, su cupo y si ya está matriculado
+- los grupos en borrador no se ofrecen
+- terminado sin confirmar: se muestra el nivel sugerido pero no se recomienda nada
+- confirmado: se recomiendan los grupos de primaria Básico
+- los recomendados van primero
+- solo se ubica a alumnos → 400
+- una persona que no existe → 404
+- un alumno no puede usar la ubicación → 403
+- el administrador la pasa al grupo recomendado
+- el cupo de A se libera y el de B se ocupa
+- la matrícula anterior queda retirada y la nueva pendiente
+- el cambio queda registrado con quién, cuándo y por qué
+- se puede buscar por el grupo al que entró o del que salió
+- la matrícula ya retirada no se puede mover → 409
+- al mismo grupo → 400
+- a un grupo en borrador → 409
+- a un grupo que no existe → 404
+- una matrícula que no existe → 404
+- un motivo demasiado largo → 400
+- un alumno no puede cambiar grupos → 403
+- al grupo lleno → 409 y nada cambia
+- Ana sigue en B y C sigue con 1 de 1
+- matricular a quien ya está en el grupo sigue dando 409
+- una matrícula activa sigue activa y conserva el pago confirmado
+- Ana tiene un solo cupo vivo
+- 6 cambios simultáneos a un grupo de 1 cupo: entra solo 1
+- los otros 5 siguen en A, sin perder su cupo
+- 4 cambios simultáneos de la misma matrícula: se aplica uno y queda un solo cupo
+- y se registra un solo cambio
+- el banco de preguntas queda como estaba
 
 ## Cómo repetirlas
 

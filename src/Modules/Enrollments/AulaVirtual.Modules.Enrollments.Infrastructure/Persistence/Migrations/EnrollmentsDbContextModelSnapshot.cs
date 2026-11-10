@@ -95,6 +95,93 @@ namespace AulaVirtual.Modules.Enrollments.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_enrollments_status", "status IN ('pending', 'active', 'withdrawn')");
                         });
                 });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Enrollments.Domain.EnrollmentTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("FromEnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_enrollment_id");
+
+                    b.Property<Guid>("FromOfferingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_offering_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<Guid>("ToEnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_enrollment_id");
+
+                    b.Property<Guid>("ToOfferingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_offering_id");
+
+                    b.Property<DateTimeOffset>("TransferredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("transferred_at");
+
+                    b.Property<Guid>("TransferredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transferred_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_enrollment_transfers");
+
+                    b.HasIndex("FromEnrollmentId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_enrollment_transfers_from_enrollment");
+
+                    b.HasIndex("FromOfferingId")
+                        .HasDatabaseName("ix_enrollment_transfers_from_offering");
+
+                    b.HasIndex("ToEnrollmentId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_enrollment_transfers_to_enrollment");
+
+                    b.HasIndex("ToOfferingId")
+                        .HasDatabaseName("ix_enrollment_transfers_to_offering");
+
+                    b.HasIndex("TransferredAt")
+                        .IsDescending()
+                        .HasDatabaseName("ix_enrollment_transfers_transferred_at");
+
+                    b.HasIndex("StudentUserId", "TransferredAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_enrollment_transfers_student_transferred_at");
+
+                    b.ToTable("enrollment_transfers", "enrollments", t =>
+                        {
+                            t.HasCheckConstraint("ck_enrollment_transfers_groups", "from_offering_id <> to_offering_id");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Enrollments.Domain.EnrollmentTransfer", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Enrollments.Domain.Enrollment", null)
+                        .WithMany()
+                        .HasForeignKey("FromEnrollmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_enrollment_transfers_enrollments_from_enrollment_id");
+
+                    b.HasOne("AulaVirtual.Modules.Enrollments.Domain.Enrollment", null)
+                        .WithMany()
+                        .HasForeignKey("ToEnrollmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_enrollment_transfers_enrollments_to_enrollment_id");
+                });
 #pragma warning restore 612, 618
         }
     }
