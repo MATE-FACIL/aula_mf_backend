@@ -1,4 +1,5 @@
 using AulaVirtual.Modules.Exams.Api.Controllers;
+using AulaVirtual.Modules.Exams.Application.Diagnostics;
 using AulaVirtual.Modules.Exams.Application.Practice;
 using AulaVirtual.Modules.Exams.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,12 @@ public static class DependencyInjection
         services.AddScoped<PracticeAdminUseCases>();
         services.AddScoped<StudentPracticeUseCases>();
         services.AddScoped<IPracticeProgressDirectory>(provider => provider.GetRequiredService<StudentPracticeUseCases>());
+
+        // Entry diagnostic: question bank (SCRUM-47), the student's test (SCRUM-48/49) and the teacher's review.
+        services.AddScoped<IDiagnosticRepository, DiagnosticRepository>();
+        services.AddScoped<DiagnosticBankUseCases>();
+        services.AddScoped<StudentDiagnosticUseCases>();
+        services.AddScoped<DiagnosticReviewUseCases>();
 
         services.AddDbContext<ExamsDbContext>(options =>
         {

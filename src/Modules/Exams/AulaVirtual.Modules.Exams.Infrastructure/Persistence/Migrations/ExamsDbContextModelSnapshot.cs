@@ -23,6 +23,233 @@ namespace AulaVirtual.Modules.Exams.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticAnswer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("answer");
+
+                    b.Property<DateTimeOffset>("AnsweredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("answered_at");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_correct");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("level");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("question_id");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("topic");
+
+                    b.HasKey("Id")
+                        .HasName("pk_diagnostic_answers");
+
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_diagnostic_answers_question");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_diagnostic_answers_attempt_question");
+
+                    b.ToTable("diagnostic_answers", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_diagnostic_answers_skipped", "answer IS NOT NULL OR NOT is_correct");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<Guid?>("ConfirmedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmed_by_user_id");
+
+                    b.Property<string>("ConfirmedLevel")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("confirmed_level");
+
+                    b.PrimitiveCollection<Guid[]>("QuestionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("question_ids");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("stage");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<string>("SuggestedLevel")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("suggested_level");
+
+                    b.HasKey("Id")
+                        .HasName("pk_diagnostic_attempts");
+
+                    b.HasIndex("Status", "StartedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_diagnostic_attempts_status_started_at");
+
+                    b.HasIndex("StudentUserId", "Stage")
+                        .IsUnique()
+                        .HasDatabaseName("ux_diagnostic_attempts_student_stage");
+
+                    b.ToTable("diagnostic_attempts", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_diagnostic_attempts_completed", "(status = 'in_progress' AND completed_at IS NULL AND suggested_level IS NULL) OR (status = 'completed' AND completed_at IS NOT NULL AND suggested_level IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_diagnostic_attempts_confirmed", "(confirmed_level IS NULL) = (confirmed_by_user_id IS NULL) AND (confirmed_level IS NULL) = (confirmed_at IS NULL)");
+
+                            t.HasCheckConstraint("ck_diagnostic_attempts_stage", "stage IN ('primary', 'secondary')");
+
+                            t.HasCheckConstraint("ck_diagnostic_attempts_status", "status IN ('in_progress', 'completed')");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("CorrectNumber")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("correct_number");
+
+                    b.Property<int?>("CorrectOption")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_option");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("explanation");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("level");
+
+                    b.PrimitiveCollection<string[]>("Options")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("options");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("prompt");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("stage");
+
+                    b.Property<decimal>("Tolerance")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("tolerance");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("topic");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_diagnostic_questions");
+
+                    b.HasIndex("Stage", "IsArchived", "Position")
+                        .HasDatabaseName("ix_diagnostic_questions_stage_active_position");
+
+                    b.ToTable("diagnostic_questions", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_diagnostic_questions_answer", "(kind = 'multiple_choice' AND correct_option IS NOT NULL) OR (kind = 'numeric' AND correct_number IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_diagnostic_questions_kind", "kind IN ('multiple_choice', 'numeric')");
+
+                            t.HasCheckConstraint("ck_diagnostic_questions_level", "level IN ('prebasic', 'basic', 'intermediate', 'advanced')");
+
+                            t.HasCheckConstraint("ck_diagnostic_questions_position", "position >= 1");
+
+                            t.HasCheckConstraint("ck_diagnostic_questions_stage", "stage IN ('primary', 'secondary')");
+                        });
+                });
+
             modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Practice.Exercise", b =>
                 {
                     b.Property<Guid>("Id")
@@ -158,6 +385,23 @@ namespace AulaVirtual.Modules.Exams.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_exercise_attempts_student_lesson");
 
                     b.ToTable("exercise_attempts", "exams");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticAnswer", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_diagnostic_answers_diagnostic_attempts_attempt_id");
+
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Diagnostics.DiagnosticQuestion", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_diagnostic_answers_diagnostic_questions_question_id");
                 });
 
             modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Practice.ExerciseAttempt", b =>

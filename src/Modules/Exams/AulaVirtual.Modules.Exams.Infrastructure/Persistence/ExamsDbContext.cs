@@ -1,3 +1,4 @@
+using AulaVirtual.Modules.Exams.Domain.Diagnostics;
 using AulaVirtual.Modules.Exams.Domain.Practice;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -11,6 +12,9 @@ public sealed class ExamsDbContext(DbContextOptions<ExamsDbContext> options) : D
 {
     public DbSet<Exercise> Exercises => Set<Exercise>();
     public DbSet<ExerciseAttempt> Attempts => Set<ExerciseAttempt>();
+    public DbSet<DiagnosticQuestion> DiagnosticQuestions => Set<DiagnosticQuestion>();
+    public DbSet<DiagnosticAttempt> DiagnosticAttempts => Set<DiagnosticAttempt>();
+    public DbSet<DiagnosticAnswer> DiagnosticAnswers => Set<DiagnosticAnswer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +70,96 @@ public sealed class ExamsDbContext(DbContextOptions<ExamsDbContext> options) : D
         attempt.HasIndex(item => new { item.StudentUserId, item.AnsweredAt })
             .HasDatabaseName("ix_exercise_attempts_student_answered_at").IsDescending(false, true);
         attempt.HasIndex(item => item.ExerciseId).HasDatabaseName("ix_exercise_attempts_exercise");
+
+        ConfigureDiagnostics(modelBuilder);
+    }
+
+    // Entry diagnostic (SCRUM-47/48).
+    private static void ConfigureDiagnostics(ModelBuilder modelBuilder)
+    {
+        var question = modelBuilder.Entity<DiagnosticQuestion>();
+        question.ToTable("diagnostic_questions", ExamsDbOptions.Schema, table =>
+        {
+            table.HasCheckConstraint("ck_diagnostic_questions_stage", "stage IN ('primary', 'secondary')");
+            table.HasCheckConstraint("ck_diagnostic_questions_level", "level IN ('prebasic', 'basic', 'intermediate', 'advanced')");
+            table.HasCheckConstraint("ck_diagnostic_questions_kind", "kind IN ('multiple_choice', 'numeric')");
+            table.HasCheckConstraint("ck_diagnostic_questions_position", "position >= 1");
+            table.HasCheckConstraint("ck_diagnostic_questions_answer",
+                "(kind = 'multiple_choice' AND correct_option IS NOT NULL) OR (kind = 'numeric' AND correct_number IS NOT NULL)");
+        });
+        question.HasKey(item => item.Id).HasName("pk_diagnostic_questions");
+        question.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        question.Property(item => item.Stage).HasColumnName("stage").HasMaxLength(20).IsRequired();
+        question.Property(item => item.Level).HasColumnName("level").HasMaxLength(20).IsRequired();
+        question.Property(item => item.Topic).HasColumnName("topic").HasMaxLength(DiagnosticQuestion.MaxTopicLength).IsRequired();
+        question.Property(item => item.Position).HasColumnName("position").IsRequired();
+        question.Property(item => item.Kind).HasColumnName("kind").HasMaxLength(20)
+            .HasConversion(value => ExerciseKinds.ToCode(value),
+                value => value == ExerciseKinds.MultipleChoice ? ExerciseKind.MultipleChoice : ExerciseKind.Numeric)
+            .IsRequired();
+        question.Property(item => item.Prompt).HasColumnName("prompt").HasMaxLength(ExerciseRules.MaxPromptLength).IsRequired();
+        question.Property(item => item.Options).HasColumnName("options").HasColumnType("text[]").IsRequired();
+        question.Property(item => item.CorrectOption).HasColumnName("correct_option");
+        question.Property(item => item.CorrectNumber).HasColumnName("correct_number").HasPrecision(18, 6);
+        question.Property(item => item.Tolerance).HasColumnName("tolerance").HasPrecision(18, 6).IsRequired();
+        question.Property(item => item.Explanation).HasColumnName("explanation").HasMaxLength(ExerciseRules.MaxExplanationLength);
+        question.Property(item => item.IsArchived).HasColumnName("is_archived").IsRequired();
+        question.Property(item => item.CreatedAt).HasColumnName("created_at").IsRequired();
+        question.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+        // A stage's questions in order, and the per-stage count of active ones.
+        question.HasIndex(item => new { item.Stage, item.IsArchived, item.Position }).HasDatabaseName("ix_diagnostic_questions_stage_active_position");
+
+        var attempt = modelBuilder.Entity<DiagnosticAttempt>();
+        attempt.ToTable("diagnostic_attempts", ExamsDbOptions.Schema, table =>
+        {
+            table.HasCheckConstraint("ck_diagnostic_attempts_stage", "stage IN ('primary', 'secondary')");
+            table.HasCheckConstraint("ck_diagnostic_attempts_status", "status IN ('in_progress', 'completed')");
+            table.HasCheckConstraint("ck_diagnostic_attempts_completed",
+                "(status = 'in_progress' AND completed_at IS NULL AND suggested_level IS NULL) OR " +
+                "(status = 'completed' AND completed_at IS NOT NULL AND suggested_level IS NOT NULL)");
+            table.HasCheckConstraint("ck_diagnostic_attempts_confirmed",
+                "(confirmed_level IS NULL) = (confirmed_by_user_id IS NULL) AND (confirmed_level IS NULL) = (confirmed_at IS NULL)");
+        });
+        attempt.HasKey(item => item.Id).HasName("pk_diagnostic_attempts");
+        attempt.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        attempt.Property(item => item.StudentUserId).HasColumnName("student_user_id").IsRequired();
+        attempt.Property(item => item.Stage).HasColumnName("stage").HasMaxLength(20).IsRequired();
+        attempt.Property(item => item.QuestionIds).HasColumnName("question_ids").HasColumnType("uuid[]").IsRequired();
+        attempt.Property(item => item.Status).HasColumnName("status").HasMaxLength(20)
+            .HasConversion(value => value == DiagnosticStatus.Completed ? "completed" : "in_progress",
+                value => value == "completed" ? DiagnosticStatus.Completed : DiagnosticStatus.InProgress)
+            .IsRequired();
+        attempt.Property(item => item.StartedAt).HasColumnName("started_at").IsRequired();
+        attempt.Property(item => item.CompletedAt).HasColumnName("completed_at");
+        attempt.Property(item => item.SuggestedLevel).HasColumnName("suggested_level").HasMaxLength(20);
+        attempt.Property(item => item.ConfirmedLevel).HasColumnName("confirmed_level").HasMaxLength(20);
+        attempt.Property(item => item.ConfirmedByUserId).HasColumnName("confirmed_by_user_id");
+        attempt.Property(item => item.ConfirmedAt).HasColumnName("confirmed_at");
+        // One diagnostic per student and stage: also stops a double start from two tabs.
+        attempt.HasIndex(item => new { item.StudentUserId, item.Stage }).IsUnique().HasDatabaseName("ux_diagnostic_attempts_student_stage");
+        // The teacher's list by status, newest first.
+        attempt.HasIndex(item => new { item.Status, item.StartedAt }).HasDatabaseName("ix_diagnostic_attempts_status_started_at")
+            .IsDescending(false, true);
+
+        var answer = modelBuilder.Entity<DiagnosticAnswer>();
+        answer.ToTable("diagnostic_answers", ExamsDbOptions.Schema, table =>
+            table.HasCheckConstraint("ck_diagnostic_answers_skipped", "answer IS NOT NULL OR NOT is_correct"));
+        answer.HasKey(item => item.Id).HasName("pk_diagnostic_answers");
+        answer.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        answer.Property(item => item.AttemptId).HasColumnName("attempt_id").IsRequired();
+        answer.Property(item => item.QuestionId).HasColumnName("question_id").IsRequired();
+        answer.Property(item => item.Topic).HasColumnName("topic").HasMaxLength(DiagnosticQuestion.MaxTopicLength).IsRequired();
+        answer.Property(item => item.Level).HasColumnName("level").HasMaxLength(20).IsRequired();
+        answer.Property(item => item.Answer).HasColumnName("answer").HasMaxLength(ExerciseRules.MaxAnswerLength);
+        answer.Property(item => item.IsCorrect).HasColumnName("is_correct").IsRequired();
+        answer.Property(item => item.AnsweredAt).HasColumnName("answered_at").IsRequired();
+        answer.HasOne<DiagnosticAttempt>().WithMany().HasForeignKey(item => item.AttemptId)
+            .HasConstraintName("fk_diagnostic_answers_diagnostic_attempts_attempt_id").OnDelete(DeleteBehavior.Cascade);
+        answer.HasOne<DiagnosticQuestion>().WithMany().HasForeignKey(item => item.QuestionId)
+            .HasConstraintName("fk_diagnostic_answers_diagnostic_questions_question_id").OnDelete(DeleteBehavior.Restrict);
+        // One answer per question and attempt; also reads an attempt's answers and counts them.
+        answer.HasIndex(item => new { item.AttemptId, item.QuestionId }).IsUnique().HasDatabaseName("ux_diagnostic_answers_attempt_question");
+        answer.HasIndex(item => item.QuestionId).HasDatabaseName("ix_diagnostic_answers_question");
     }
 }
 

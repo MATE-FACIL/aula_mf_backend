@@ -10,8 +10,10 @@ public static class Permissions
     public const string EnrollmentsManage = "enrollments.manage";
     // Take attendance in any class. A teacher can always take it in their own groups without this permission.
     public const string AttendanceManage = "attendance.manage";
+    // See the entry diagnostics and confirm the suggested level (SCRUM-48). Administrators and teachers by default.
+    public const string DiagnosticsReview = "diagnostics.review";
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
-    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage, EnrollmentsManage, AttendanceManage };
+    { CoursesManage, CourseOfferingsManage, InstructorsManage, UsersManage, EnrollmentsManage, AttendanceManage, DiagnosticsReview };
 }
 
 public static class Roles
