@@ -35,6 +35,23 @@ public sealed record AdminUserListItem(
 
 public sealed record AdminLinkedUser(Guid Id, string FullName, string? LoginIdentifier, string Status);
 
+public static class AdminConsentStatus
+{
+    public const string Accepted = "accepted";
+    // A guardian is linked but has not accepted the current text yet.
+    public const string Pending = "pending";
+    // Nobody can give the consent: the student has no guardian linked.
+    public const string NoGuardian = "no_guardian";
+}
+
+/// <summary>Where the parent's consent for a student's data stands (SCRUM-38), for the current text.</summary>
+public sealed record AdminConsent(
+    string Status,
+    string CurrentVersion,
+    bool IsProvisional,
+    DateTimeOffset? AcceptedAt,
+    string? AcceptedByName);
+
 public sealed record AdminUserDetail(
     Guid Id,
     string GivenNames,
@@ -50,7 +67,9 @@ public sealed record AdminUserDetail(
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastLoginAt,
     IReadOnlyList<AdminLinkedUser> Students,
-    IReadOnlyList<AdminLinkedUser> Guardians);
+    IReadOnlyList<AdminLinkedUser> Guardians,
+    /// <summary>Only for students; null for anyone else.</summary>
+    AdminConsent? Consent);
 
 public sealed record AdminSummary(
     int TotalUsers,

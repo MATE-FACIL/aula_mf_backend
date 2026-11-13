@@ -1,4 +1,6 @@
+using AulaVirtual.Modules.Users.Api.Controllers;
 using AulaVirtual.Modules.Users.Application.Abstractions;
+using AulaVirtual.Modules.Users.Application.Consent;
 using AulaVirtual.Modules.Users.Application.Users.CreateUser;
 using AulaVirtual.Modules.Users.Infrastructure.Persistence;
 using FluentValidation;
@@ -23,6 +25,10 @@ public static class DependencyInjection
         services.AddScoped<IUserExistence, UserExistence>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IGuardianLinks, GuardianLinkStore>();
+        // The parent's consent for their children's data (SCRUM-38).
+        services.AddScoped<IGuardianConsents, GuardianConsentStore>();
+        services.AddScoped<GuardianConsentUseCases>();
+        services.AddControllers().AddApplicationPart(typeof(FamilyConsentController).Assembly);
         services.AddSingleton(TimeProvider.System);
 
         services.AddDbContext<UsersDbContext>(options =>

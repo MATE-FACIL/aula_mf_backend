@@ -4,6 +4,8 @@ using AulaVirtual.Modules.Auth.Application.Accounts.ChangeStatus;
 using AulaVirtual.Modules.Auth.Application.Accounts.CreateAccount;
 using AulaVirtual.Modules.Auth.Domain.Accounts;
 using AulaVirtual.Modules.Authorization.Application;
+using AulaVirtual.Modules.Users.Application.Abstractions;
+using AulaVirtual.Modules.Users.Application.Consent;
 using Microsoft.AspNetCore.Authorization;
 
 namespace AulaVirtual.Modules.Administration.Tests;
@@ -13,6 +15,7 @@ public sealed class AdminUserUseCasesTests
     private readonly FakeBackOffice backOffice = new();
 
     private AdminUserUseCases UseCases() => new(
+        backOffice,
         backOffice,
         backOffice,
         backOffice,
@@ -188,6 +191,49 @@ public sealed class AdminUserUseCasesTests
         Assert.Empty(guardianDetail.Guardians);
         Assert.Equal(guardian, Assert.Single(studentDetail!.Guardians).Id);
         Assert.Null(await useCases.GetAsync(Guid.NewGuid(), default));
+    }
+
+    [Fact]
+    public async Task Detail_OfAStudent_ShowsWhereTheParentsConsentStands()
+    {
+        var version = ConsentTexts.Current.Version;
+        var mother = backOffice.AddPerson("Rosa", "Mamani", Roles.Guardian);
+        var student = backOffice.AddPerson("Ana", "Quispe", Roles.Student);
+        var useCases = UseCases();
+
+        // Nobody can give the consent yet.
+        var alone = (await useCases.GetAsync(student, default))!.Consent!;
+        Assert.Equal((AdminConsentStatus.NoGuardian, version, null), (alone.Status, alone.CurrentVersion, alone.AcceptedAt));
+
+        // A guardian is linked but has not accepted: pending. Accepting another (older) text does not count.
+        await useCases.LinkAsync(mother, student, default);
+        backOffice.Consents.Add(new ConsentRecord(student, mother, "2025-01-old", DateTimeOffset.UtcNow.AddDays(-30)));
+        Assert.Equal(AdminConsentStatus.Pending, (await useCases.GetAsync(student, default))!.Consent!.Status);
+
+        // Accepted: with who and when.
+        var at = DateTimeOffset.UtcNow.AddHours(-2);
+        await backOffice.AcceptAsync(mother, [student], version, at, default);
+        var accepted = (await useCases.GetAsync(student, default))!.Consent!;
+        Assert.Equal((AdminConsentStatus.Accepted, "Rosa Mamani", at, ConsentTexts.Current.IsProvisional),
+            (accepted.Status, accepted.AcceptedByName, accepted.AcceptedAt, accepted.IsProvisional));
+
+        // An acceptance only counts while that guardian is still linked to the student.
+        await useCases.UnlinkAsync(mother, student, default);
+        Assert.Equal(AdminConsentStatus.NoGuardian, (await useCases.GetAsync(student, default))!.Consent!.Status);
+        var father = backOffice.AddPerson("Luis", "Quispe", Roles.Guardian);
+        await useCases.LinkAsync(father, student, default);
+        Assert.Equal(AdminConsentStatus.Pending, (await useCases.GetAsync(student, default))!.Consent!.Status);
+    }
+
+    [Fact]
+    public async Task Detail_OfAGuardianOrStaff_HasNoConsent()
+    {
+        var guardian = backOffice.AddPerson("Rosa", "Mamani", Roles.Guardian);
+        var admin = backOffice.AddPerson("Marta", "Gómez", Roles.Administrator);
+        var useCases = UseCases();
+
+        Assert.Null((await useCases.GetAsync(guardian, default))!.Consent);
+        Assert.Null((await useCases.GetAsync(admin, default))!.Consent);
     }
 
     [Fact]

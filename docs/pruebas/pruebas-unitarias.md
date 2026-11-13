@@ -1,8 +1,8 @@
 # Lista de pruebas unitarias y de integración
 
-Las 296 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 10 de noviembre de 2026.
+Las 314 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 13 de noviembre de 2026.
 
-## Administration (18)
+## Administration (20)
 
 ### AdminInstructorUseCasesTests
 
@@ -20,6 +20,8 @@ Las 296 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 10 de no
 - `CreateStudent_WithMissingData_ReturnsFieldErrors`
 - `CreateStudent_WithUnknownGuardian_CreatesNothing`
 - `Detail_ListsLinkedStudentsAndGuardians`
+- `Detail_OfAGuardianOrStaff_HasNoConsent`
+- `Detail_OfAStudent_ShowsWhereTheParentsConsentStands`
 - `Link_RequiresAGuardianAndAStudent`
 - `List_ClampsPaging`
 - `List_CombinesRoleAndStatusFilters_AndEnrichesEachRow`
@@ -433,7 +435,7 @@ Las 296 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 10 de no
 - `UnreadableAnswers_AreRejectedWithoutBeingRecorded`
 - `WithoutAnActiveEnrollment_OrOnADraftLesson_ThereIsNoPractice`
 
-## Users (9)
+## Users (25)
 
 ### BackOfficeQueryTests
 
@@ -444,10 +446,35 @@ Las 296 pruebas de `dotnet test`, por módulo y clase. Todas pasaron el 10 de no
 - `Search_FiltersEveryTermInSql_IgnoringAccents`
 - `Unlink_DeletesInOneStatement`
 
+### ConsentQueryTests
+
+- `Accepted_IsOneQuery_JoinedWithTheLinks`
+- `Accepting_IsOneStatement_ThatReadsTheLinksAndSkipsWhatIsThere`
+- `TheModel_KeepsOneAcceptancePerGuardianStudentAndVersion`
+
+### ConsentTextTests
+
+- `TheCurrentText_HasAVersionThatFitsTheTable_AndSomethingToRead`
+
 ### CreateUserTests
 
 - `CreateUser_RejectsDuplicateDocument`
 - `CreateUser_TrimsValuesAndReturnsUserId`
+
+### GuardianConsentUseCaseTests
+
+- `ANewTextAsksAgain_AndTheOldAcceptanceStaysAsEvidence`
+- `ATextThatChangedWhileReading_IsRefused_WithoutSavingAnything`
+- `AcceptingForSeveralChildren_IsOneCall_AndRepeatingItChangesNothing`
+- `Accepting_RecordsTheDateAndWho_AndLeavesTheOtherChildPending`
+- `AllOrNone_ANotOwnChildMeansNothingIsSaved`
+- `AnAcceptance_OnlyCountsWhileThatGuardianIsStillLinked`
+- `AnAccountWithoutChildren_GetsTheTextAndAnEmptyList_WithoutFurtherQueries`
+- `EveryReadHasAFixedNumberOfQueries_WhateverTheNumberOfChildren`
+- `ItNeedsAtLeastOneChild_AndNotTooMany`
+- `OneParentIsEnough_ForTheChildTheyShare`
+- `TheController_NeedsASignedInUser_AndStartsFromTheirOwnLinks`
+- `TheCurrentTextAndEachChild_StartPending_InAlphabeticalOrder`
 
 ### PersistenceModelTests
 
