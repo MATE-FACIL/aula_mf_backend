@@ -40,6 +40,9 @@ services:
     environment:
       S3_KEY: ${LOCAL_S3_ACCESS_KEY:-aula-local}
       S3_SECRET: ${LOCAL_S3_SECRET_KEY:-aula-local-secret}
+      # Orígenes del aula que pueden subir archivos desde el navegador (CORS): el aula en desarrollo, y la de las
+      # pruebas en navegador (puerto 3124). Separados por espacios.
+      S3_CORS_ORIGINS: ${LOCAL_S3_CORS_ORIGINS:-http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:3124}
     entrypoint: ["sh", "/scripts/create-buckets.sh"]
     volumes:
       - ./docker/create-buckets.sh:/scripts/create-buckets.sh:ro
