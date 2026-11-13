@@ -27,6 +27,11 @@ function findAdministrator() {
   return { account, user };
 }
 
+/** Una consulta a la base de pruebas, para comprobar lo que la API no muestra (p. ej. que no hay filas duplicadas). */
+export const psql = (sql) => execFileSync('docker', ['compose', 'exec', '-T', 'postgres', 'psql',
+  '-U', setting('POSTGRES_USER', 'aula'), '-d', setting('POSTGRES_DB', 'aula_virtual_dev'), '-At', '-c', sql],
+{ cwd: root, encoding: 'utf8' }).trim();
+
 const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
 
 export function signToken(account, user) {

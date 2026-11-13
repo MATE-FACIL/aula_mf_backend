@@ -4,6 +4,7 @@ using AulaVirtual.Modules.Auth.Application.Accounts.CreateAccount;
 using AulaVirtual.Modules.Auth.Domain.Accounts;
 using AulaVirtual.Modules.Authorization.Application;
 using AulaVirtual.Modules.Users.Application.Abstractions;
+using AulaVirtual.Modules.Users.Application.Consent;
 
 namespace AulaVirtual.Modules.Administration.Application.Users;
 
@@ -19,6 +20,7 @@ namespace AulaVirtual.Modules.Administration.Application.Users;
 public sealed class AdminUserUseCases(
     IUserDirectory users,
     IGuardianLinks links,
+    IGuardianConsents consents,
     IAccountAdministration accounts,
     IRoleDirectory roles,
     AuthorizationUseCases authorization,
@@ -91,15 +93,21 @@ public sealed class AdminUserUseCases(
             return null;
         }
 
+        // Authorization answers while Users is read: different modules, different DbContexts.
+        var rolesTask = roles.GetRoleCodesByUserIdsAsync([userId], cancellationToken);
         var studentIds = await links.GetStudentIdsAsync(userId, cancellationToken);
         var guardianIds = await links.GetGuardianIdsAsync(userId, cancellationToken);
         var related = await users.GetManyAsync([.. studentIds, .. guardianIds], cancellationToken);
+        var userRoles = (await rolesTask).GetValueOrDefault(userId) ?? [];
 
+        // The accounts (Auth) and the consent (Users, again) run at the same time. Only a student has a consent.
         var accountsTask = accounts.GetByUserIdsAsync(
             [userId, .. related.Select(user => user.Id)],
             cancellationToken);
-        var rolesTask = roles.GetRoleCodesByUserIdsAsync([userId], cancellationToken);
-        await Task.WhenAll(accountsTask, rolesTask);
+        var consentTask = userRoles.Contains(Roles.Student)
+            ? ConsentOfAsync(userId, guardianIds, related, cancellationToken)
+            : Task.FromResult<AdminConsent?>(null);
+        await Task.WhenAll(accountsTask, consentTask);
 
         var accountsByUser = accountsTask.Result;
         var account = accountsByUser.GetValueOrDefault(userId);
@@ -123,12 +131,39 @@ public sealed class AdminUserUseCases(
             person.DocumentType,
             person.DocumentNumber,
             LoginOf(account),
-            rolesTask.Result.GetValueOrDefault(userId) ?? [],
+            userRoles,
             StatusOf(account),
             person.CreatedAt,
             account?.LastLoginAt,
             related.Where(user => studentSet.Contains(user.Id)).Select(ToLinked).ToArray(),
-            related.Where(user => guardianSet.Contains(user.Id)).Select(ToLinked).ToArray());
+            related.Where(user => guardianSet.Contains(user.Id)).Select(ToLinked).ToArray(),
+            consentTask.Result);
+    }
+
+    /// <summary>One query: the acceptances of the current text by the guardians still linked to this student.</summary>
+    private async Task<AdminConsent?> ConsentOfAsync(
+        Guid studentId,
+        IReadOnlyList<Guid> guardianIds,
+        IReadOnlyList<UserSummary> related,
+        CancellationToken cancellationToken)
+    {
+        var text = ConsentTexts.Current;
+        if (guardianIds.Count == 0)
+        {
+            return new AdminConsent(AdminConsentStatus.NoGuardian, text.Version, text.IsProvisional, null, null);
+        }
+
+        var latest = (await consents.GetAcceptedAsync([studentId], text.Version, cancellationToken))
+            .OrderByDescending(record => record.AcceptedAt)
+            .FirstOrDefault();
+        if (latest is null)
+        {
+            return new AdminConsent(AdminConsentStatus.Pending, text.Version, text.IsProvisional, null, null);
+        }
+
+        // The guardian who accepted is still linked, so they are among the people already loaded.
+        var by = related.FirstOrDefault(user => user.Id == latest.GuardianUserId)?.FullName;
+        return new AdminConsent(AdminConsentStatus.Accepted, text.Version, text.IsProvisional, latest.AcceptedAt, by);
     }
 
     public async Task<AdminResult<IssuedCredentials>> CreateStudentAsync(

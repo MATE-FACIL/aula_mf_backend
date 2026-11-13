@@ -24,6 +24,46 @@ namespace AulaVirtual.Modules.Users.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "unaccent");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_at");
+
+                    b.Property<Guid>("GuardianUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("guardian_user_id");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("terms_version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_guardian_consents");
+
+                    b.HasIndex("StudentUserId", "TermsVersion")
+                        .HasDatabaseName("ix_guardian_consents_student_version");
+
+                    b.HasIndex("GuardianUserId", "StudentUserId", "TermsVersion")
+                        .IsUnique()
+                        .HasDatabaseName("ux_guardian_consents_guardian_student_version");
+
+                    b.ToTable("guardian_consents", "users", t =>
+                        {
+                            t.HasCheckConstraint("ck_guardian_consents_distinct_users", "guardian_user_id <> student_user_id");
+                        });
+                });
+
             modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianLink", b =>
                 {
                     b.Property<Guid>("GuardianUserId")
@@ -108,6 +148,23 @@ namespace AulaVirtual.Modules.Users.Infrastructure.Persistence.Migrations
                         .HasFilter("document_number IS NOT NULL");
 
                     b.ToTable("users", "users");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianConsent", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Users.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("GuardianUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_guardian_consents_users_guardian_user_id");
+
+                    b.HasOne("AulaVirtual.Modules.Users.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("StudentUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_guardian_consents_users_student_user_id");
                 });
 
             modelBuilder.Entity("AulaVirtual.Modules.Users.Domain.Guardianship.GuardianLink", b =>

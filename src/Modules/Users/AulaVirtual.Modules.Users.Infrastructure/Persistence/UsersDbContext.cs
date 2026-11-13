@@ -11,6 +11,8 @@ public sealed class UsersDbContext(DbContextOptions<UsersDbContext> options)
 
     public DbSet<GuardianLink> GuardianLinks => Set<GuardianLink>();
 
+    public DbSet<GuardianConsent> GuardianConsents => Set<GuardianConsent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("users");

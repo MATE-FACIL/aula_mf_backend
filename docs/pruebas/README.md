@@ -1,10 +1,10 @@
 # Pruebas del backend
 
-Resultados del 10 de noviembre de 2026 sobre la rama `feature/scrum-45-asignacion-grupo`, con la asignación a grupo (SCRUM-45) y el diagnóstico de entrada (SCRUM-47, SCRUM-48).
+Resultados del 13 de noviembre de 2026 sobre la rama `feature/scrum-38-consentimiento`, con el consentimiento del padre (SCRUM-38), la asignación a grupo (SCRUM-45) y el diagnóstico de entrada (SCRUM-47, SCRUM-48).
 
 | Prueba | Dónde corre | Resultado |
 |---|---|---|
-| Unitarias y de integración (`dotnet test`) | En memoria | **296 de 296** |
+| Unitarias y de integración (`dotnet test`) | En memoria | **314 de 314** |
 | Matrícula (SCRUM-40, SCRUM-44) | API en Docker con PostgreSQL 17 | **24 de 24** |
 | Grupos y horarios (SCRUM-41, SCRUM-42) | API en Docker con PostgreSQL 17 | **17 de 17** |
 | Clases del alumno (SCRUM-50, SCRUM-51) | API en Docker con PostgreSQL 17 | **11 de 11** |
@@ -17,6 +17,7 @@ Resultados del 10 de noviembre de 2026 sobre la rama `feature/scrum-45-asignacio
 | Panel del profesor (SCRUM-69) | API en Docker con PostgreSQL 17 | **8 de 8** |
 | Diagnóstico de entrada (SCRUM-47, SCRUM-48) | API en Docker con PostgreSQL 17 | **22 de 22** |
 | Asignación a grupo y cambio de grupo (SCRUM-45), con pedidos simultáneos | API en Docker con PostgreSQL 17 | **32 de 32** |
+| Consentimiento del padre (SCRUM-38), con pedidos simultáneos | API en Docker con PostgreSQL 17 | **31 de 31** |
 | Recorridos en navegador real | Aula conectada a la API en Docker | Ver las [pruebas del frontend](https://github.com/MATE-FACIL/aula_mf_frontend/blob/main/docs/pruebas/README.md) |
 
 Las pruebas contra la API también pasaron en una base nueva, preparada igual que en el CI. Esa base no tiene almacenamiento, así que la suite de archivos se omite allí; la de archivos corre con `docker-compose.storage.yml`. Durante el recorrido en navegador, la API no registró ningún error ni excepción.
@@ -25,18 +26,18 @@ Las pruebas contra la API también pasaron en una base nueva, preparada igual qu
 
 | Módulo | Pruebas |
 |---|---:|
-| Administration | 18 |
+| Administration | 20 |
 | Attendance | 23 |
 | Auth | 43 |
 | Authorization | 12 |
 | Courses | 96 |
 | Enrollments | 42 |
 | Exams | 47 |
-| Users | 9 |
+| Users | 25 |
 | SharedKernel.Storage | 6 |
-| **Total** | **296** |
+| **Total** | **314** |
 
-La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones, archivos, niveles, práctica, asistencia y panel del profesor están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md); las del diagnóstico, en [DIAGNOSTICO.md](../DIAGNOSTICO.md); las de la asignación a grupo, en [ASIGNACION-DE-GRUPO.md](../ASIGNACION-DE-GRUPO.md).
+La lista completa está en [pruebas-unitarias.md](pruebas-unitarias.md). Las reglas de los endpoints de lecciones, archivos, niveles, práctica, asistencia y panel del profesor están en [LECCIONES-Y-ASISTENCIA.md](../LECCIONES-Y-ASISTENCIA.md); las del diagnóstico, en [DIAGNOSTICO.md](../DIAGNOSTICO.md); las de la asignación a grupo, en [ASIGNACION-DE-GRUPO.md](../ASIGNACION-DE-GRUPO.md); las del consentimiento del padre, en [CONSENTIMIENTO.md](../CONSENTIMIENTO.md).
 
 ## Pruebas contra la API real
 
@@ -273,6 +274,41 @@ Al terminar, la suite borra todo lo que subió (pase o falle) y comprueba que el
 - 4 cambios simultáneos de la misma matrícula: se aplica uno y queda un solo cupo
 - y se registra un solo cambio
 - el banco de preguntas queda como estaba
+
+
+### Consentimiento del padre
+
+- el padre recibe el texto vigente, con versión y secciones
+- ve a sus 3 hijos pendientes, por orden alfabético, y no al de otro padre
+- un padre sin hijos recibe el texto y una lista vacía
+- sin token → 401
+- ficha del alumno con padre vinculado: pendiente, con la versión vigente
+- ficha del alumno sin padre: «sin padre» (nadie puede dar el consentimiento)
+- ficha del padre: no tiene consentimiento
+- la madre acepta por Ana: queda la fecha y quién
+- Beto sigue pendiente (solo se aceptó por Ana)
+- el administrador ve en la ficha: aceptado, cuándo y por quién
+- basta con un padre: el otro padre ve a Ana ya aceptada
+- aceptar otra vez: nada cambia (la fecha sigue siendo la primera)
+- 8 aceptaciones a la vez: todas responden bien y no hay error por duplicado
+- quedan los 3 hijos aceptados
+- en la base hay exactamente una aceptación por hijo (3 filas), sin duplicados
+- todas las respuestas ven la misma fecha: se guardó una sola aceptación
+- aceptar por el hijo de otro padre → 404
+- y no se guardó nada para ese hijo
+- todo o nada: con un hijo ajeno en la lista no se guarda ninguno → 404
+- el hijo propio de esa lista sigue pendiente
+- un texto que cambió mientras lo leía → 409 con indicación de recargar
+- sin versión → 409
+- sin hijos elegidos → 400
+- demasiados hijos a la vez → 400
+- un padre que no es de Ana no puede aceptar por ella → 404
+- un alumno no puede aceptar por sí mismo → 404
+- aceptar sin token → 401
+- si se desvincula a quien aceptó, el alumno queda «sin padre»
+- con otro padre vinculado, el consentimiento de la madre no vale: pendiente
+- al volver a vincular a la madre, su aceptación vuelve a contar
+- el administrador no puede aceptar por una familia (no tiene hijos vinculados)
 
 ## Cómo repetirlas
 

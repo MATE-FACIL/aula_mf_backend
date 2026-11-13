@@ -12,7 +12,7 @@ namespace AulaVirtual.Modules.Administration.Tests;
 // In-memory stand-in for the Users, Auth and Authorization modules, so the administration
 // use cases can be exercised end to end without PostgreSQL.
 internal sealed class FakeBackOffice :
-    IUserDirectory, IGuardianLinks, ICreateUser,
+    IUserDirectory, IGuardianLinks, IGuardianConsents, ICreateUser,
     IAccountAdministration, IAuthRepository,
     IRoleDirectory, IAuthorizationRepository, IUserExistence, IPermissionChecker,
     IPasswordGenerator, IPasswordHasher
@@ -24,6 +24,7 @@ internal sealed class FakeBackOffice :
 
     public List<UserSummary> People { get; } = [];
     public HashSet<(Guid Guardian, Guid Student)> Links { get; } = [];
+    public List<ConsentRecord> Consents { get; } = [];
     public List<AuthAccount> Accounts { get; } = [];
     public List<UserRole> UserRoles { get; } = [];
 
@@ -69,6 +70,29 @@ internal sealed class FakeBackOffice :
 
     public Task<int> CountAsync(DateTimeOffset? createdSince, CancellationToken cancellationToken) =>
         Task.FromResult(People.Count(person => createdSince is null || person.CreatedAt >= createdSince));
+
+    // ── Parents' consent (same rules as the store: only linked guardians count, repeating changes nothing) ──
+    public Task<IReadOnlyList<ConsentRecord>> GetAcceptedAsync(IReadOnlyCollection<Guid> studentUserIds,
+        string termsVersion, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<ConsentRecord>>(Consents
+            .Where(consent => studentUserIds.Contains(consent.StudentUserId) && consent.TermsVersion == termsVersion &&
+                Links.Contains((consent.GuardianUserId, consent.StudentUserId)))
+            .ToList());
+
+    public Task<int> AcceptAsync(Guid guardianUserId, IReadOnlyCollection<Guid> studentUserIds, string termsVersion,
+        DateTimeOffset acceptedAt, CancellationToken cancellationToken)
+    {
+        var added = 0;
+        foreach (var studentId in studentUserIds.Where(id => Links.Contains((guardianUserId, id))))
+        {
+            if (Consents.Any(consent => consent.GuardianUserId == guardianUserId && consent.StudentUserId == studentId &&
+                consent.TermsVersion == termsVersion)) continue;
+            Consents.Add(new ConsentRecord(studentId, guardianUserId, termsVersion, acceptedAt));
+            added++;
+        }
+
+        return Task.FromResult(added);
+    }
 
     public Task<bool> LinkAsync(Guid guardianUserId, Guid studentUserId, CancellationToken cancellationToken) =>
         Task.FromResult(Links.Add((guardianUserId, studentUserId)));
