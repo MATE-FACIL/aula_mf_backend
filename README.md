@@ -58,6 +58,8 @@ docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d --build
 
 Sin ese archivo, la API funciona igual, pero las subidas de archivos responden 503.
 
+El servidor local ya trae la regla CORS que necesita el aula para subir archivos desde el navegador (SCRUM-71). Los orígenes permitidos son los del aula en desarrollo (`localhost:3000`) y los de las pruebas en navegador; se cambian con `LOCAL_S3_CORS_ORIGINS` (separados por espacios).
+
 El servidor local guarda los archivos en memoria: al apagarlo no queda nada en el disco ni en volúmenes de Docker. Además, la suite de archivos (`tests/e2e/files.mjs`) borra todo lo que sube, pase o falle, y comprueba que no haya quedado nada.
 
 ## Estructura
