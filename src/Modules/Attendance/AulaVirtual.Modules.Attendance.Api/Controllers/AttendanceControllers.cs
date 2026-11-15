@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using AulaVirtual.Modules.Attendance.Application;
+using AulaVirtual.Modules.Exams.Application.Practice;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -112,4 +113,49 @@ public sealed class TeacherPanelController(TeacherPanelUseCases useCases) : Sign
             ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found", detail: "No tienes ese grupo asignado.")
             : Ok(group);
     }
+}
+
+public sealed record ReplaceTeacherExercisesRequest(IReadOnlyList<ExerciseInput>? Exercises);
+
+// The teacher edits the practice exercises of the courses they teach (a course counts when they are assigned to one of
+// its groups). Answers included: the teacher is part of the team for their own courses. Any other course is a 404.
+[ApiController]
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/teachers/me/courses/{courseId:guid}")]
+[Authorize]
+public sealed class TeacherPracticeController(TeacherPracticeUseCases useCases) : SignedInController
+{
+    [HttpGet("lessons")]
+    public async Task<IActionResult> Lessons(Guid courseId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        var lessons = await useCases.GetLessonsAsync(userId, courseId, cancellationToken);
+        return lessons is null
+            ? Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found", detail: "No tienes asignado ese curso.")
+            : Ok(lessons);
+    }
+
+    [HttpGet("lessons/{lessonId:guid}/exercises")]
+    public async Task<IActionResult> Get(Guid courseId, Guid lessonId, CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        return ToResult(await useCases.GetExercisesAsync(userId, courseId, lessonId, cancellationToken));
+    }
+
+    [HttpPut("lessons/{lessonId:guid}/exercises")]
+    public async Task<IActionResult> Replace(Guid courseId, Guid lessonId, ReplaceTeacherExercisesRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUser(out var userId)) return Unauthenticated();
+        return ToResult(await useCases.ReplaceExercisesAsync(userId, courseId, lessonId, request.Exercises, cancellationToken));
+    }
+
+    private IActionResult ToResult<T>(PracticeResult<T> result) => result.Status switch
+    {
+        PracticeResultStatus.Ok => Ok(result.Value),
+        PracticeResultStatus.NotFound => Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found", detail: result.Detail),
+        PracticeResultStatus.Conflict => Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflict", detail: result.Detail),
+        PracticeResultStatus.Invalid => Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid practice", detail: result.Detail),
+        _ => throw new InvalidOperationException("Unknown practice result.")
+    };
 }
