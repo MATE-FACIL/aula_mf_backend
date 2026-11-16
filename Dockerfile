@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # SDK con el código y dotnet-ef: lo usan las migraciones y el provisioning de desarrollo.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS tools
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS tools
 WORKDIR /src
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="$PATH:/root/.dotnet/tools"
