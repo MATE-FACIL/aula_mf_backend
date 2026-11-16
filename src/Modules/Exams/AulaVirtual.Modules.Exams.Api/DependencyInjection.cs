@@ -1,6 +1,7 @@
 using AulaVirtual.Modules.Exams.Api.Controllers;
 using AulaVirtual.Modules.Enrollments.Application;
 using AulaVirtual.Modules.Exams.Application.Diagnostics;
+using AulaVirtual.Modules.Exams.Application.Evaluations;
 using AulaVirtual.Modules.Exams.Application.Practice;
 using AulaVirtual.Modules.Exams.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,11 @@ public static class DependencyInjection
         services.AddScoped<DiagnosticReviewUseCases>();
         // Where the student's diagnostics stand, for the placement in a group (Enrollments, SCRUM-45).
         services.AddScoped<IDiagnosticLevelDirectory, DiagnosticLevelDirectory>();
+
+        // Evaluations with automatic grading and a deadline controlled by the server (SCRUM-62).
+        services.AddScoped<IEvaluationRepository, EvaluationRepository>();
+        services.AddScoped<TeacherEvaluationUseCases>();
+        services.AddScoped<StudentEvaluationUseCases>();
 
         services.AddDbContext<ExamsDbContext>(options =>
         {

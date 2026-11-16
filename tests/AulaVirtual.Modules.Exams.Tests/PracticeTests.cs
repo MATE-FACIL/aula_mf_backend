@@ -189,6 +189,8 @@ public sealed class PracticeUseCaseTests
             Task.FromResult<IReadOnlyList<LessonRef>>(Lessons.Values.Where(l => l.CourseId == courseId && l.IsPublished).ToList());
         public Task<bool> CanStudyAsync(Guid studentUserId, Guid courseId, CancellationToken cancellationToken) =>
             Task.FromResult(Enrolled.Contains((studentUserId, courseId)));
+        public Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Guid>>([]);
 
         public Task<IReadOnlyList<Exercise>> GetAllAsync(Guid lessonId, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Exercise>>(Exercises.Where(e => e.LessonId == lessonId).OrderBy(e => e.Position).ToList());
