@@ -12,7 +12,7 @@ RUN dotnet restore AulaVirtual.sln
 FROM tools AS publish
 RUN dotnet publish src/AulaVirtual.Api/AulaVirtual.Api.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS api
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 COPY --from=publish /app .
