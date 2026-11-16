@@ -34,6 +34,9 @@ public interface IStudentCourseAccess
 {
     /// <summary>True with an ACTIVE enrollment in a published group of the course.</summary>
     Task<bool> CanStudyAsync(Guid studentUserId, Guid courseId, CancellationToken cancellationToken);
+
+    /// <summary>The groups where the student has an ACTIVE enrollment (evaluations are per group). One query.</summary>
+    Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken);
 }
 
 public interface IEnrollmentRepository

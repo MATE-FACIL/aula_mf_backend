@@ -250,6 +250,250 @@ namespace AulaVirtual.Modules.Exams.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.Evaluation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ClosesAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closes_at");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_published");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OfferingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("offering_id");
+
+                    b.Property<DateTimeOffset>("OpensAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opens_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluations");
+
+                    b.HasIndex("OfferingId", "OpensAt")
+                        .HasDatabaseName("ix_evaluations_offering_opens_at");
+
+                    b.ToTable("evaluations", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_evaluations_duration", "duration_minutes BETWEEN 5 AND 180");
+
+                            t.HasCheckConstraint("ck_evaluations_kind", "kind IN ('weekly', 'midterm', 'final')");
+
+                            t.HasCheckConstraint("ck_evaluations_window", "closes_at > opens_at");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationAnswer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("answer");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<string>("Competency")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("competency");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_correct");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("question_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluation_answers");
+
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_evaluation_answers_question");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluation_answers_attempt_question");
+
+                    b.ToTable("evaluation_answers", "exams");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CorrectCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_count");
+
+                    b.Property<DateTimeOffset>("Deadline")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deadline");
+
+                    b.Property<Guid>("EvaluationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluation_id");
+
+                    b.Property<bool>("IsLate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_late");
+
+                    b.Property<int>("QuestionCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("question_count");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("score");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("StudentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluation_attempts");
+
+                    b.HasIndex("StudentUserId")
+                        .HasDatabaseName("ix_evaluation_attempts_student");
+
+                    b.HasIndex("EvaluationId", "StudentUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluation_attempts_evaluation_student");
+
+                    b.ToTable("evaluation_attempts", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_evaluation_attempts_submitted", "(submitted_at IS NULL AND score IS NULL) OR (submitted_at IS NOT NULL AND score IS NOT NULL AND score BETWEEN 0 AND 20)");
+                        });
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Competency")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("competency");
+
+                    b.Property<decimal?>("CorrectNumber")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("correct_number");
+
+                    b.Property<int?>("CorrectOption")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_option");
+
+                    b.Property<Guid>("EvaluationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluation_id");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("explanation");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.PrimitiveCollection<string[]>("Options")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("options");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("prompt");
+
+                    b.Property<decimal>("Tolerance")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("tolerance");
+
+                    b.HasKey("Id")
+                        .HasName("pk_evaluation_questions");
+
+                    b.HasIndex("EvaluationId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ux_evaluation_questions_evaluation_position");
+
+                    b.ToTable("evaluation_questions", "exams", t =>
+                        {
+                            t.HasCheckConstraint("ck_evaluation_questions_answer", "(kind = 'multiple_choice' AND correct_option IS NOT NULL) OR (kind = 'numeric' AND correct_number IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_evaluation_questions_kind", "kind IN ('multiple_choice', 'numeric')");
+
+                            t.HasCheckConstraint("ck_evaluation_questions_position", "position >= 1");
+                        });
+                });
+
             modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Practice.Exercise", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,6 +646,43 @@ namespace AulaVirtual.Modules.Exams.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_diagnostic_answers_diagnostic_questions_question_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationAnswer", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluation_answers_evaluation_attempts_attempt_id");
+
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationQuestion", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluation_answers_evaluation_questions_question_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationAttempt", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Evaluations.Evaluation", null)
+                        .WithMany()
+                        .HasForeignKey("EvaluationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluation_attempts_evaluations_evaluation_id");
+                });
+
+            modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Evaluations.EvaluationQuestion", b =>
+                {
+                    b.HasOne("AulaVirtual.Modules.Exams.Domain.Evaluations.Evaluation", null)
+                        .WithMany()
+                        .HasForeignKey("EvaluationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_evaluation_questions_evaluations_evaluation_id");
                 });
 
             modelBuilder.Entity("AulaVirtual.Modules.Exams.Domain.Practice.ExerciseAttempt", b =>

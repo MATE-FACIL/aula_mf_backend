@@ -1,4 +1,5 @@
 using AulaVirtual.Modules.Exams.Domain.Diagnostics;
+using AulaVirtual.Modules.Exams.Domain.Evaluations;
 using AulaVirtual.Modules.Exams.Domain.Practice;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -15,6 +16,10 @@ public sealed class ExamsDbContext(DbContextOptions<ExamsDbContext> options) : D
     public DbSet<DiagnosticQuestion> DiagnosticQuestions => Set<DiagnosticQuestion>();
     public DbSet<DiagnosticAttempt> DiagnosticAttempts => Set<DiagnosticAttempt>();
     public DbSet<DiagnosticAnswer> DiagnosticAnswers => Set<DiagnosticAnswer>();
+    public DbSet<Evaluation> Evaluations => Set<Evaluation>();
+    public DbSet<EvaluationQuestion> EvaluationQuestions => Set<EvaluationQuestion>();
+    public DbSet<EvaluationAttempt> EvaluationAttempts => Set<EvaluationAttempt>();
+    public DbSet<EvaluationAnswer> EvaluationAnswers => Set<EvaluationAnswer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,6 +77,102 @@ public sealed class ExamsDbContext(DbContextOptions<ExamsDbContext> options) : D
         attempt.HasIndex(item => item.ExerciseId).HasDatabaseName("ix_exercise_attempts_exercise");
 
         ConfigureDiagnostics(modelBuilder);
+        ConfigureEvaluations(modelBuilder);
+    }
+
+    // Evaluations of a group with automatic grading (SCRUM-62).
+    private static void ConfigureEvaluations(ModelBuilder modelBuilder)
+    {
+        var evaluation = modelBuilder.Entity<Evaluation>();
+        evaluation.ToTable("evaluations", ExamsDbOptions.Schema, table =>
+        {
+            table.HasCheckConstraint("ck_evaluations_kind", "kind IN ('weekly', 'midterm', 'final')");
+            table.HasCheckConstraint("ck_evaluations_window", "closes_at > opens_at");
+            table.HasCheckConstraint("ck_evaluations_duration", "duration_minutes BETWEEN 5 AND 180");
+        });
+        evaluation.HasKey(item => item.Id).HasName("pk_evaluations");
+        evaluation.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        evaluation.Property(item => item.OfferingId).HasColumnName("offering_id").IsRequired();
+        evaluation.Property(item => item.CourseId).HasColumnName("course_id").IsRequired();
+        evaluation.Property(item => item.Kind).HasColumnName("kind").HasMaxLength(20)
+            .HasConversion(value => EvaluationKinds.ToCode(value),
+                value => value == EvaluationKinds.Midterm ? EvaluationKind.Midterm : value == EvaluationKinds.Final ? EvaluationKind.Final : EvaluationKind.Weekly)
+            .IsRequired();
+        evaluation.Property(item => item.Title).HasColumnName("title").HasMaxLength(Evaluation.MaxTitleLength).IsRequired();
+        evaluation.Property(item => item.OpensAt).HasColumnName("opens_at").IsRequired();
+        evaluation.Property(item => item.ClosesAt).HasColumnName("closes_at").IsRequired();
+        evaluation.Property(item => item.DurationMinutes).HasColumnName("duration_minutes").IsRequired();
+        evaluation.Property(item => item.IsPublished).HasColumnName("is_published").IsRequired();
+        evaluation.Property(item => item.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
+        evaluation.Property(item => item.CreatedAt).HasColumnName("created_at").IsRequired();
+        evaluation.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+        // A group's evaluations in calendar order, and the published ones of many groups.
+        evaluation.HasIndex(item => new { item.OfferingId, item.OpensAt }).HasDatabaseName("ix_evaluations_offering_opens_at");
+
+        var question = modelBuilder.Entity<EvaluationQuestion>();
+        question.ToTable("evaluation_questions", ExamsDbOptions.Schema, table =>
+        {
+            table.HasCheckConstraint("ck_evaluation_questions_kind", "kind IN ('multiple_choice', 'numeric')");
+            table.HasCheckConstraint("ck_evaluation_questions_position", "position >= 1");
+            table.HasCheckConstraint("ck_evaluation_questions_answer",
+                "(kind = 'multiple_choice' AND correct_option IS NOT NULL) OR (kind = 'numeric' AND correct_number IS NOT NULL)");
+        });
+        question.HasKey(item => item.Id).HasName("pk_evaluation_questions");
+        question.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        question.Property(item => item.EvaluationId).HasColumnName("evaluation_id").IsRequired();
+        question.Property(item => item.Position).HasColumnName("position").IsRequired();
+        question.Property(item => item.Competency).HasColumnName("competency").HasMaxLength(30).IsRequired();
+        question.Property(item => item.Kind).HasColumnName("kind").HasMaxLength(20)
+            .HasConversion(value => ExerciseKinds.ToCode(value),
+                value => value == ExerciseKinds.MultipleChoice ? ExerciseKind.MultipleChoice : ExerciseKind.Numeric)
+            .IsRequired();
+        question.Property(item => item.Prompt).HasColumnName("prompt").HasMaxLength(ExerciseRules.MaxPromptLength).IsRequired();
+        question.Property(item => item.Options).HasColumnName("options").HasColumnType("text[]").IsRequired();
+        question.Property(item => item.CorrectOption).HasColumnName("correct_option");
+        question.Property(item => item.CorrectNumber).HasColumnName("correct_number").HasPrecision(18, 6);
+        question.Property(item => item.Tolerance).HasColumnName("tolerance").HasPrecision(18, 6).IsRequired();
+        question.Property(item => item.Explanation).HasColumnName("explanation").HasMaxLength(ExerciseRules.MaxExplanationLength);
+        question.HasOne<Evaluation>().WithMany().HasForeignKey(item => item.EvaluationId)
+            .HasConstraintName("fk_evaluation_questions_evaluations_evaluation_id").OnDelete(DeleteBehavior.Cascade);
+        question.HasIndex(item => new { item.EvaluationId, item.Position }).IsUnique().HasDatabaseName("ux_evaluation_questions_evaluation_position");
+
+        var attempt = modelBuilder.Entity<EvaluationAttempt>();
+        attempt.ToTable("evaluation_attempts", ExamsDbOptions.Schema, table =>
+            table.HasCheckConstraint("ck_evaluation_attempts_submitted",
+                "(submitted_at IS NULL AND score IS NULL) OR (submitted_at IS NOT NULL AND score IS NOT NULL AND score BETWEEN 0 AND 20)"));
+        attempt.HasKey(item => item.Id).HasName("pk_evaluation_attempts");
+        attempt.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        attempt.Property(item => item.EvaluationId).HasColumnName("evaluation_id").IsRequired();
+        attempt.Property(item => item.StudentUserId).HasColumnName("student_user_id").IsRequired();
+        attempt.Property(item => item.StartedAt).HasColumnName("started_at").IsRequired();
+        attempt.Property(item => item.Deadline).HasColumnName("deadline").IsRequired();
+        attempt.Property(item => item.SubmittedAt).HasColumnName("submitted_at");
+        attempt.Property(item => item.CorrectCount).HasColumnName("correct_count").IsRequired();
+        attempt.Property(item => item.QuestionCount).HasColumnName("question_count").IsRequired();
+        attempt.Property(item => item.Score).HasColumnName("score").HasPrecision(4, 1);
+        attempt.Property(item => item.IsLate).HasColumnName("is_late").IsRequired();
+        attempt.Ignore(item => item.IsSubmitted);
+        attempt.HasOne<Evaluation>().WithMany().HasForeignKey(item => item.EvaluationId)
+            .HasConstraintName("fk_evaluation_attempts_evaluations_evaluation_id").OnDelete(DeleteBehavior.Cascade);
+        // One attempt per student and evaluation: also stops a double start from two tabs.
+        attempt.HasIndex(item => new { item.EvaluationId, item.StudentUserId }).IsUnique().HasDatabaseName("ux_evaluation_attempts_evaluation_student");
+        attempt.HasIndex(item => item.StudentUserId).HasDatabaseName("ix_evaluation_attempts_student");
+
+        var answer = modelBuilder.Entity<EvaluationAnswer>();
+        answer.ToTable("evaluation_answers", ExamsDbOptions.Schema);
+        answer.HasKey(item => item.Id).HasName("pk_evaluation_answers");
+        answer.Property(item => item.Id).HasColumnName("id").ValueGeneratedNever();
+        answer.Property(item => item.AttemptId).HasColumnName("attempt_id").IsRequired();
+        answer.Property(item => item.QuestionId).HasColumnName("question_id").IsRequired();
+        answer.Property(item => item.Competency).HasColumnName("competency").HasMaxLength(30).IsRequired();
+        answer.Property(item => item.Answer).HasColumnName("answer").HasMaxLength(ExerciseRules.MaxAnswerLength);
+        answer.Property(item => item.IsCorrect).HasColumnName("is_correct").IsRequired();
+        answer.HasOne<EvaluationAttempt>().WithMany().HasForeignKey(item => item.AttemptId)
+            .HasConstraintName("fk_evaluation_answers_evaluation_attempts_attempt_id").OnDelete(DeleteBehavior.Cascade);
+        answer.HasOne<EvaluationQuestion>().WithMany().HasForeignKey(item => item.QuestionId)
+            .HasConstraintName("fk_evaluation_answers_evaluation_questions_question_id").OnDelete(DeleteBehavior.Cascade);
+        answer.HasIndex(item => new { item.AttemptId, item.QuestionId }).IsUnique().HasDatabaseName("ux_evaluation_answers_attempt_question");
+        answer.HasIndex(item => item.QuestionId).HasDatabaseName("ix_evaluation_answers_question");
     }
 
     // Entry diagnostic (SCRUM-47/48).

@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<AttendanceUseCases>();
         services.AddScoped<StudentAttendanceUseCases>();
         services.AddScoped<TeacherPanelUseCases>();
+        services.AddScoped<TeacherPracticeUseCases>();
 
         services.AddDbContext<AttendanceDbContext>(options =>
         {
