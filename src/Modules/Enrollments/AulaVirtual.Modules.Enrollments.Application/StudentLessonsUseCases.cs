@@ -38,6 +38,9 @@ public sealed class StudentLessonsUseCases(
             .ToArray();
     }
 
+    public async Task<IReadOnlyList<Guid>> GetActiveOfferingIdsAsync(Guid studentUserId, CancellationToken cancellationToken) =>
+        await enrollments.GetActiveOfferingIdsAsync(studentUserId, cancellationToken);
+
     /// <summary>Two queries: active enrollments and their editions.</summary>
     public async Task<bool> CanStudyAsync(Guid studentUserId, Guid courseId, CancellationToken cancellationToken)
     {
